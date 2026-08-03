@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<!-- <script setup lang="ts">
 import {
     SidebarGroup,
     SidebarGroupContent,
@@ -41,4 +41,4 @@ defineProps<Props>();
             </SidebarMenu>
         </SidebarGroupContent>
     </SidebarGroup>
-</template>
+</template> -->
