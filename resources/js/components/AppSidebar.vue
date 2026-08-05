@@ -1,7 +1,16 @@
 <!-- resources/js/components/AppSidebar.vue -->
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { LayoutGrid } from '@lucide/vue';
+import { 
+    LayoutGrid, 
+    Package, 
+    Calendar, 
+    Users, 
+    Ship,
+    CreditCard,
+    TrendingUp,
+    Settings,
+} from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import SidebarLogout from '@/components/SidebarLogout.vue';
@@ -28,21 +37,47 @@ const getDashboardRoute = () => {
     
     if (user.value.role === 'admin') {
         return '/admin/dashboard';
-    } else if (user.value.role === 'operator') {
-        return '/operator/dashboard';
     } else {
-        return '/user/dashboard';
+        return '/operator/dashboard';
     }
 };
 
+// Admin & Operator navigation items
 const mainNavItems = computed<NavItem[]>(() => {
-    return [
+    const items: NavItem[] = [
         {
             title: 'Dashboard',
             href: getDashboardRoute(),
             icon: LayoutGrid,
         },
     ];
+
+    // Admin specific links
+    if (user.value?.role === 'admin') {
+        items.push(
+            { title: 'Tours', href: '/admin/tours', icon: Package },
+            { title: 'Bookings', href: '/admin/bookings', icon: Calendar },
+            { title: 'Users', href: '/admin/users', icon: Users },
+            { title: 'Payments', href: '/admin/payments', icon: CreditCard },
+            { title: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
+        );
+    }
+
+    // Operator specific links
+    if (user.value?.role === 'operator') {
+        items.push(
+            { title: 'My Tours', href: '/operator/tours', icon: Package },
+            { title: 'Bookings', href: '/operator/bookings', icon: Calendar },
+            { title: 'My Boats', href: '/operator/boats', icon: Ship },
+        );
+    }
+
+    // Settings for both admin and operator
+    items.push(
+        { title: 'Settings', href: '/settings', icon: Settings },
+    );
+
+    return items;
 });
 </script>
 
