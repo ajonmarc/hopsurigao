@@ -18,30 +18,30 @@ export function createColumns(
     onDelete: (user: UserRow) => void,
 ): ColumnDef<AppTableFeatures, UserRow>[] {
     return [
-        {
-            id: 'select',
-            header: ({ table }) =>
-                h(Checkbox, {
-                    modelValue: table.getIsAllPageRowsSelected()
-                        ? true
-                        : table.getIsSomePageRowsSelected()
-                            ? 'indeterminate'
-                            : false,
-                    'onUpdate:modelValue': (value: boolean | 'indeterminate') => {
-                        table.toggleAllPageRowsSelected(!!value);
-                    },
-                    'aria-label': 'Select all',
-                }),
-            cell: ({ row }) =>
-                h(Checkbox, {
-                    modelValue: row.getIsSelected(),
-                    'onUpdate:modelValue': (value: boolean | 'indeterminate') => {
-                        row.toggleSelected(!!value);
-                    },
-                    'aria-label': 'Select row',
-                }),
-            enableSorting: false,
-        },
+        // {
+        //     id: 'select',
+        //     header: ({ table }) =>
+        //         h(Checkbox, {
+        //             modelValue: table.getIsAllPageRowsSelected()
+        //                 ? true
+        //                 : table.getIsSomePageRowsSelected()
+        //                     ? 'indeterminate'
+        //                     : false,
+        //             'onUpdate:modelValue': (value: boolean | 'indeterminate') => {
+        //                 table.toggleAllPageRowsSelected(!!value);
+        //             },
+        //             'aria-label': 'Select all',
+        //         }),
+        //     cell: ({ row }) =>
+        //         h(Checkbox, {
+        //             modelValue: row.getIsSelected(),
+        //             'onUpdate:modelValue': (value: boolean | 'indeterminate') => {
+        //                 row.toggleSelected(!!value);
+        //             },
+        //             'aria-label': 'Select row',
+        //         }),
+        //     enableSorting: false,
+        // },
         {
             accessorKey: 'name',
             header: 'Name',

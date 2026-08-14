@@ -53,8 +53,6 @@ const adminNavItems: NavItem[] = [
         isActive: true,
         items: [
             { title: 'Users', href: '/admin/users', icon: Users },
-            { title: 'Roles', href: '/admin/roles', icon: Anchor },
-            { title: 'Permissions', href: '/admin/permissions', icon: ClipboardCheck },
         ],
     },
     { title: 'Reports', href: '/admin/reports', icon: FileBarChart },

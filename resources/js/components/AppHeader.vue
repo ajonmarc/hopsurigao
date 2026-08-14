@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, Menu, Search, Sailboat, MapPin, ClipboardList } from '@lucide/vue';    
+import { LayoutGrid, Menu, Search, Sailboat, MapPin, ClipboardList } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -48,6 +47,9 @@ const activeItemStyles =
 
 const mainNavItems: NavItem[] = [
     { title: 'Dashboard', href: '/tourist/dashboard', icon: LayoutGrid },
+    { title: 'Destinations', href: '/tourist/destinations', icon: MapPin },
+    { title: 'My Bookings', href: '/tourist/bookings', icon: ClipboardList },
+    { title: 'Tours', href: '/tourist/tours', icon: Sailboat },
 ];
 </script>
 

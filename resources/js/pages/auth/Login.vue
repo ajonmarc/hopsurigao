@@ -36,7 +36,6 @@ defineProps<{
         {{ status }}
     </div>
 
-    <PasskeyVerify />
 
     <Form
         v-bind="store.form()"

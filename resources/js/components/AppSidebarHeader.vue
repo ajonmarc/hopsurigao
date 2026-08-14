@@ -40,7 +40,7 @@ const auth = computed(() => page.props.auth);
             </template>
 
             <div class="ml-auto flex items-center gap-2">
-                 <ThemeSwitcher />
+                 <ThemeSwitcher v-if="false" />
                 <AppearanceTabs />
 
                 <DropdownMenu>

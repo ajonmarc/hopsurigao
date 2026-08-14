@@ -2,10 +2,13 @@ import { ref, watch } from 'vue';
 import { DEFAULT_THEME, type ThemeName } from '@/lib/themes';
 
 const STORAGE_KEY = 'theme';
+const isBrowser = typeof window !== 'undefined';
 
 const theme = ref<ThemeName>(DEFAULT_THEME);
 
 function applyTheme(value: ThemeName) {
+    if (!isBrowser) return;
+
     if (value === DEFAULT_THEME) {
         document.documentElement.removeAttribute('data-theme');
     } else {
@@ -14,6 +17,8 @@ function applyTheme(value: ThemeName) {
 }
 
 export function initializeTheme() {
+    if (!isBrowser) return;
+
     const stored = localStorage.getItem(STORAGE_KEY) as ThemeName | null;
     theme.value = stored ?? DEFAULT_THEME;
     applyTheme(theme.value);
@@ -21,7 +26,11 @@ export function initializeTheme() {
 
 function updateTheme(value: ThemeName) {
     theme.value = value;
-    localStorage.setItem(STORAGE_KEY, value);
+
+    if (isBrowser) {
+        localStorage.setItem(STORAGE_KEY, value);
+    }
+
     applyTheme(value);
 }
 
