@@ -1,0 +1,90 @@
+[data-theme='midnight'] {
+    --background: hsl(220 30% 98%);
+    --foreground: hsl(230 35% 14%);
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(230 35% 14%);
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(230 35% 14%);
+    --primary: hsl(245 60% 45%);
+    --primary-foreground: hsl(220 30% 98%);
+    --secondary: hsl(230 35% 94%);
+    --secondary-foreground: hsl(230 35% 18%);
+    --muted: hsl(220 25% 95%);
+    --muted-foreground: hsl(230 15% 42%);
+    --accent: hsl(280 65% 60%);
+    --accent-foreground: hsl(220 30% 98%);
+    --destructive: hsl(4 78% 56%);
+    --destructive-foreground: hsl(220 30% 98%);
+    --border: hsl(225 25% 88%);
+    --input: hsl(225 25% 88%);
+    --ring: hsl(245 60% 45%);
+    --chart-1: hsl(245 60% 50%);
+    --chart-2: hsl(280 65% 60%);
+    --chart-3: hsl(190 60% 45%);
+    --chart-4: hsl(320 55% 55%);
+    --chart-5: hsl(45 80% 55%);
+    --radius: 0.625rem;
+    --sidebar-background: hsl(235 45% 10%);
+    --sidebar-foreground: hsl(225 30% 93%);
+    --sidebar-primary: hsl(280 65% 62%);
+    --sidebar-primary-foreground: hsl(235 45% 8%);
+    --sidebar-accent: hsl(235 30% 18%);
+    --sidebar-accent-foreground: hsl(225 30% 96%);
+    --sidebar-border: hsl(235 30% 20%);
+    --sidebar-ring: hsl(280 65% 62%);
+    --sidebar: hsl(235 45% 10%);
+}
+
+[data-theme='midnight'].dark {
+    --background: hsl(235 35% 6%);
+    --foreground: hsl(225 25% 95%);
+    --card: hsl(235 30% 9%);
+    --card-foreground: hsl(225 25% 95%);
+    --popover: hsl(235 30% 9%);
+    --popover-foreground: hsl(225 25% 95%);
+    --primary: hsl(245 55% 60%);
+    --primary-foreground: hsl(235 35% 8%);
+    --secondary: hsl(235 22% 16%);
+    --secondary-foreground: hsl(225 25% 92%);
+    --muted: hsl(235 22% 15%);
+    --muted-foreground: hsl(225 12% 62%);
+    --accent: hsl(280 60% 65%);
+    --accent-foreground: hsl(235 35% 8%);
+    --destructive: hsl(4 70% 56%);
+    --destructive-foreground: hsl(225 25% 95%);
+    --border: hsl(235 22% 18%);
+    --input: hsl(235 22% 18%);
+    --ring: hsl(245 55% 60%);
+    --chart-1: hsl(245 55% 62%);
+    --chart-2: hsl(280 60% 65%);
+    --chart-3: hsl(190 55% 50%);
+    --chart-4: hsl(320 50% 58%);
+    --chart-5: hsl(45 75% 58%);
+    --sidebar-background: hsl(235 40% 4%);
+    --sidebar-foreground: hsl(225 25% 92%);
+    --sidebar-primary: hsl(280 65% 65%);
+    --sidebar-primary-foreground: hsl(235 40% 6%);
+    --sidebar-accent: hsl(235 25% 12%);
+    --sidebar-accent-foreground: hsl(225 25% 94%);
+    --sidebar-border: hsl(235 25% 14%);
+    --sidebar-ring: hsl(280 65% 65%);
+    --sidebar: hsl(235 40% 4%);
+}
+
+/* Gradient override — targets the actual element that has bg-sidebar,
+   used identically in both the desktop and mobile sheet branches */
+[data-theme='midnight'] [data-sidebar='sidebar'] {
+    background-image: linear-gradient(
+        180deg,
+        hsl(245 60% 18%) 0%,
+        hsl(280 45% 14%) 100%
+    );
+}
+
+[data-theme='midnight'].dark [data-sidebar='sidebar'] {
+    background-image: linear-gradient(
+        180deg,
+        hsl(245 55% 10%) 0%,
+        hsl(280 40% 7%) 100%
+    );
+}

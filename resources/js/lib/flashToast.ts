@@ -7,10 +7,12 @@ export function initializeFlashToast(): void {
         const flash = (event as CustomEvent).detail?.flash;
         const data = flash?.toast as FlashToast | undefined;
 
-        if (!data) {
-            return;
-        }
+        if (!data) return;
 
-        toast[data.type](data.message);
+        toast[data.type](data.message, {
+            description: data.description,
+            duration: data.duration ?? 4000,
+            class: 'my-custom-toast', // hook for your own CSS
+        });
     });
 }

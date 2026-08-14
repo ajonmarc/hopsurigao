@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { dashboard } from '@/routes';
+import Heading from '@/components/Heading.vue';
+import { dashboard } from '@/routes/operator';
 
 defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: 'Operator Dashboard',
                 href: dashboard(),
+                title: 'Dashboard',
             },
         ],
     },
@@ -15,11 +16,15 @@ defineOptions({
 </script>
 
 <template>
+
     <Head title="Dashboard" />
+    <div class="px-4 py-6">
+        <Heading title="operator Dashboard" description="manage your operator dashboard" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-
+        <div class="mt-6 max-w-2xl">
+            <section class="space-y-12">
+                main content
+            </section>
+        </div>
     </div>
 </template>

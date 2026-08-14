@@ -1,0 +1,73 @@
+/* ============ Forest Canopy ============ */
+[data-theme='forest'] {
+    --background: hsl(90 25% 97%);
+    --foreground: hsl(150 30% 12%);
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(150 30% 12%);
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(150 30% 12%);
+    --primary: hsl(150 55% 28%);
+    --primary-foreground: hsl(90 25% 97%);
+    --secondary: hsl(95 30% 92%);
+    --secondary-foreground: hsl(150 30% 18%);
+    --muted: hsl(90 20% 94%);
+    --muted-foreground: hsl(150 12% 42%);
+    --accent: hsl(38 80% 52%);
+    --accent-foreground: hsl(30 60% 14%);
+    --destructive: hsl(4 78% 56%);
+    --destructive-foreground: hsl(90 25% 97%);
+    --border: hsl(100 20% 87%);
+    --input: hsl(100 20% 87%);
+    --ring: hsl(150 55% 28%);
+    --chart-1: hsl(150 55% 35%);
+    --chart-2: hsl(38 80% 52%);
+    --chart-3: hsl(200 55% 45%);
+    --chart-4: hsl(80 45% 45%);
+    --chart-5: hsl(15 70% 55%);
+    --radius: 0.625rem;
+    --sidebar-background: hsl(150 40% 10%);
+    --sidebar-foreground: hsl(95 25% 92%);
+    --sidebar-primary: hsl(38 80% 52%);
+    --sidebar-primary-foreground: hsl(150 40% 8%);
+    --sidebar-accent: hsl(150 30% 16%);
+    --sidebar-accent-foreground: hsl(95 25% 95%);
+    --sidebar-border: hsl(150 30% 18%);
+    --sidebar-ring: hsl(38 80% 52%);
+    --sidebar: hsl(150 40% 10%);
+}
+
+[data-theme='forest'].dark {
+    --background: hsl(150 30% 6%);
+    --foreground: hsl(95 20% 94%);
+    --card: hsl(150 25% 9%);
+    --card-foreground: hsl(95 20% 94%);
+    --popover: hsl(150 25% 9%);
+    --popover-foreground: hsl(95 20% 94%);
+    --primary: hsl(150 45% 40%);
+    --primary-foreground: hsl(150 30% 6%);
+    --secondary: hsl(150 18% 15%);
+    --secondary-foreground: hsl(95 20% 90%);
+    --muted: hsl(150 18% 14%);
+    --muted-foreground: hsl(95 10% 60%);
+    --accent: hsl(38 75% 55%);
+    --accent-foreground: hsl(30 55% 10%);
+    --destructive: hsl(4 70% 56%);
+    --destructive-foreground: hsl(95 20% 94%);
+    --border: hsl(150 18% 17%);
+    --input: hsl(150 18% 17%);
+    --ring: hsl(150 45% 40%);
+    --chart-1: hsl(150 45% 45%);
+    --chart-2: hsl(38 75% 55%);
+    --chart-3: hsl(200 50% 50%);
+    --chart-4: hsl(80 40% 48%);
+    --chart-5: hsl(15 65% 58%);
+    --sidebar-background: hsl(150 32% 4%);
+    --sidebar-foreground: hsl(95 20% 92%);
+    --sidebar-primary: hsl(38 80% 55%);
+    --sidebar-primary-foreground: hsl(150 32% 6%);
+    --sidebar-accent: hsl(150 22% 11%);
+    --sidebar-accent-foreground: hsl(95 20% 94%);
+    --sidebar-border: hsl(150 22% 13%);
+    --sidebar-ring: hsl(38 80% 55%);
+    --sidebar: hsl(150 32% 4%);
+}

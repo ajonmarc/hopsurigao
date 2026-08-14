@@ -1,116 +1,66 @@
 <?php
-// app/Models/User.php
+
 namespace App\Models;
 
+
+use App\Models\Role;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
+use Laravel\Fortify\Contracts\PasskeyUser;
+use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-#[Fillable([
-    'name', 'email', 'phone', 'password', 'role',
-    'profile_image', 'bio', 'address', 'is_active'
-])]
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property Carbon|null $email_verified_at
+ * @property string $password
+ * @property string|null $two_factor_secret
+ * @property string|null $two_factor_recovery_codes
+ * @property Carbon|null $two_factor_confirmed_at
+ * @property string|null $remember_token
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
+#[Fillable(['name', 'email', 'password', 'role_id', 'is_protected'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements PasskeyUser
 {
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    /** @use HasFactory<UserFactory> */
+    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
-    // Role Constants
-    public const ROLE_ADMIN = 'admin';
-    public const ROLE_OPERATOR = 'operator';
-    public const ROLE_USER = 'user';
-
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'is_active' => 'boolean',
+            'two_factor_confirmed_at' => 'datetime',
+            'is_protected' => 'boolean',
         ];
     }
 
-    // Role Check Methods
-    public function isAdmin(): bool
+
+    public function role(): BelongsTo
     {
-        return $this->role === self::ROLE_ADMIN;
+        return $this->belongsTo(Role::class);
     }
 
-    public function isOperator(): bool
-    {
-        return $this->role === self::ROLE_OPERATOR;
-    }
 
-    public function isUser(): bool
+    public function hasPermission(string $name): bool
     {
-        return $this->role === self::ROLE_USER;
-    }
-
-    // Get Role Label
-    public function getRoleLabelAttribute(): string
-    {
-        return [
-            self::ROLE_ADMIN => 'Administrator',
-            self::ROLE_OPERATOR => 'Tour Operator',
-            self::ROLE_USER => 'Tourist',
-        ][$this->role] ?? 'Unknown';
-    }
-
-    // Relationships
-    public function bookings()
-    {
-        return $this->hasMany(Booking::class);
-    }
-
-    public function tours()
-    {
-        return $this->hasMany(TourPackage::class, 'operator_id');
-    }
-
-    public function boats()
-    {
-        return $this->hasMany(Boat::class, 'operator_id');
-    }
-
-    public function reviews()
-    {
-        return $this->hasMany(Review::class);
-    }
-
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
-
-    // Scopes
-    public function scopeAdmins($query)
-    {
-        return $query->where('role', self::ROLE_ADMIN);
-    }
-
-    public function scopeOperators($query)
-    {
-        return $query->where('role', self::ROLE_OPERATOR);
-    }
-
-    public function scopeUsers($query)
-    {
-        return $query->where('role', self::ROLE_USER);
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    // Accessor
-    public function getAvatarUrlAttribute(): string
-    {
-        return $this->profile_image
-            ? asset('storage/' . $this->profile_image)
-            : 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=random';
+        return $this->role?->hasPermission($name) ?? false;
     }
 }

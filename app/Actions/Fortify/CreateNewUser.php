@@ -1,17 +1,17 @@
 <?php
-// app/Actions/Fortify/CreateNewUser.php
+
 namespace App\Actions\Fortify;
 
+use App\Concerns\PasswordValidationRules;
+use App\Concerns\ProfileValidationRules;
+use App\Models\Role;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
-use App\Concerns\PasswordValidationRules; // <-- Fix this line
 
 class CreateNewUser implements CreatesNewUsers
 {
-    use PasswordValidationRules; // <-- Now this will work
+    use PasswordValidationRules, ProfileValidationRules;
 
     /**
      * Validate and create a newly registered user.
@@ -21,25 +21,17 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input): User
     {
         Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique(User::class),
-            ],
-            'phone' => ['nullable', 'string', 'max:20'],
+            ...$this->profileRules(),
             'password' => $this->passwordRules(),
         ])->validate();
+
+        $touristRole = Role::where('name', 'Tourist')->first();
 
         return User::create([
             'name' => $input['name'],
             'email' => $input['email'],
-            'phone' => $input['phone'] ?? null,
-            'password' => Hash::make($input['password']),
-            'role' => 'user', // Default role for new users
-            'is_active' => true,
+            'password' => $input['password'],
+            'role_id' => $touristRole?->id,
         ]);
     }
 }
