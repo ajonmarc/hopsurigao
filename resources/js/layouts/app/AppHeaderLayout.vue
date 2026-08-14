@@ -20,6 +20,6 @@ withDefaults(defineProps<Props>(), {
         <AppContent variant="header">
             <slot />
         </AppContent>
-        <Toaster position="top-right" richColors closeButton :toastOptions="{ style: { borderRadius: '12px' } }" />
+        <Toaster position="top-center" richColors closeButton :toastOptions="{ style: { borderRadius: '12px' } }" />
     </AppShell>
 </template>

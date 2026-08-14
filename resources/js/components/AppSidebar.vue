@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { LogOut, LayoutGrid, Users, Anchor, MapPin, ClipboardCheck, CreditCard, FileBarChart, Activity, Sailboat, CalendarClock, CloudSun, ClipboardList } from '@lucide/vue';
+import {
+    LogOut,
+    LayoutGrid,
+    Users,
+    MapPin,
+    ClipboardCheck,
+    Sailboat,
+    CalendarClock,
+    ClipboardList,
+    Package,
+    Bell,
+    Clock,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -26,37 +38,41 @@ const homeHref = computed(() => {
     return '/';
 });
 
-// Operator-scoped nav (boats, schedules, bookings, weather)
-const operatorNavItems: NavItem[] = [
-    { title: 'Dashboard', href: '/operator/dashboard', icon: LayoutGrid },
-    { title: 'Boats', href: '/operator/boats', icon: Sailboat },
-    { title: 'Schedules', href: '/operator/schedules', icon: CalendarClock },
-    { title: 'Bookings', href: '/operator/bookings', icon: ClipboardList },
-    { title: 'Weather', href: '/operator/weather', icon: CloudSun },
-];
-
-// Tourist-scoped nav (trips, destinations, payments)
-const touristNavItems: NavItem[] = [
-    { title: 'Dashboard', href: '/tourist/dashboard', icon: LayoutGrid },
-    { title: 'Destinations', href: '/tourist/destinations', icon: MapPin },
-    { title: 'My Bookings', href: '/tourist/bookings', icon: ClipboardList },
-    { title: 'Payments', href: '/tourist/payments', icon: CreditCard },
-];
-
-// Admin nav = own tools + full access to Operator & Tourist links
+// Admin: full control over every table in the ERD
 const adminNavItems: NavItem[] = [
     { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutGrid },
+    { title: 'Users', href: '/admin/users', icon: Users },
     {
-        title: 'User Management',
-        href: '/admin/users',
-        icon: Users,
+        title: 'Packages',
+        href: '/admin/packages',
+        icon: Package,
         isActive: true,
         items: [
-            { title: 'Users', href: '/admin/users', icon: Users },
+            { title: 'Packages', href: '/admin/packages', icon: Package },
+            { title: 'Inclusions', href: '/admin/inclusions', icon: ClipboardList },
+            { title: 'Tour Dates', href: '/admin/tour-dates', icon: CalendarClock },
+            { title: 'Times', href: '/admin/times', icon: Clock },
         ],
     },
-    { title: 'Reports', href: '/admin/reports', icon: FileBarChart },
-    { title: 'Activity Logs', href: '/admin/activity', icon: Activity },
+    { title: 'Pickup Locations', href: '/admin/pickup-locations', icon: MapPin },
+    { title: 'Bookings', href: '/admin/bookings', icon: ClipboardCheck },
+    { title: 'Reminders', href: '/admin/reminders', icon: Bell },
+];
+
+// Operator: manages their own tour packages, schedules, and incoming bookings
+const operatorNavItems: NavItem[] = [
+    { title: 'Dashboard', href: '/operator/dashboard', icon: LayoutGrid },
+    { title: 'Packages', href: '/operator/packages', icon: Sailboat },
+    { title: 'Tour Dates', href: '/operator/tour-dates', icon: CalendarClock },
+    { title: 'Bookings', href: '/operator/bookings', icon: ClipboardCheck },
+    { title: 'Reminders', href: '/operator/reminders', icon: Bell },
+];
+
+// Tourist: browses packages and manages their own bookings
+const touristNavItems: NavItem[] = [
+    { title: 'Dashboard', href: '/tourist/dashboard', icon: LayoutGrid },
+    { title: 'Browse Packages', href: '/tourist/packages', icon: Sailboat },
+    { title: 'My Bookings', href: '/tourist/bookings', icon: ClipboardCheck },
 ];
 
 const handleLogout = () => {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, Menu, Search, Sailboat, MapPin, ClipboardList } from '@lucide/vue';
+import { LayoutGrid, Menu, Search, Sailboat, MapPin, ClipboardList, ClipboardCheck } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
@@ -29,6 +29,7 @@ import UserMenuContent from '@/components/UserMenuContent.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { getInitials } from '@/composables/useInitials';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import AppearanceTabs from '@/components/AppearanceTabs.vue';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -47,9 +48,8 @@ const activeItemStyles =
 
 const mainNavItems: NavItem[] = [
     { title: 'Dashboard', href: '/tourist/dashboard', icon: LayoutGrid },
-    { title: 'Destinations', href: '/tourist/destinations', icon: MapPin },
-    { title: 'My Bookings', href: '/tourist/bookings', icon: ClipboardList },
-    { title: 'Tours', href: '/tourist/tours', icon: Sailboat },
+    { title: 'Browse Packages', href: '/tourist/packages', icon: Sailboat },
+    { title: 'My Bookings', href: '/tourist/bookings', icon: ClipboardCheck },
 ];
 </script>
 
@@ -126,8 +126,11 @@ const mainNavItems: NavItem[] = [
                 <!-- Right Side -->
                 <div class="ml-auto flex items-center space-x-2">
 
+
+                    <AppearanceTabs />
+
                     <!-- Search -->
-                    <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer">
+                    <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer" v-if="false">
                         <Search class="size-5 opacity-80 group-hover:opacity-100" />
                     </Button>
 
