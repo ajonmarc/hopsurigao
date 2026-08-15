@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Tourist;
 
 use App\Http\Controllers\Controller;
 use App\Models\Package;
-use App\Models\TourDate;
 use App\Models\PickupLocation;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder;
@@ -87,16 +86,19 @@ class PackageController extends Controller
             abort(404);
         }
 
+        // Load relationships - tourDates will load times automatically
         $package->load([
             'inclusions',
             'reminders',
             'tourDates' => function ($query) {
                 $query->where('tour_date', '>=', now()->toDateString())
                     ->orderBy('tour_date')
-                    ->withCount(['bookings']);
-            },
-            'tourDates.bookings' => function ($query) {
-                $query->where('booking_status', 'confirmed');
+                    ->with(['times' => function ($q) {
+                        $q->orderBy('time');
+                    }])
+                    ->withCount(['bookings' => function ($q) {
+                        $q->where('booking_status', 'confirmed');
+                    }]);
             },
         ]);
 
@@ -107,7 +109,7 @@ class PackageController extends Controller
 
         // Calculate available spots for each tour date
         $tourDates = $package->tourDates->map(function ($tourDate) {
-            $confirmedBookings = $tourDate->bookings->sum('number_of_guests');
+            $confirmedBookings = $tourDate->bookings_count ?? 0;
             $availableSpots = max(0, $tourDate->capacity - $confirmedBookings);
             
             return [
@@ -119,10 +121,18 @@ class PackageController extends Controller
             ];
         });
 
+        // Get all times from the loaded tour dates
+        $tourTimes = $package->tourDates
+            ->pluck('times')
+            ->flatten()
+            ->unique('id')
+            ->values();
+
         return Inertia::render('tourist/packages/Show', [
             'package' => $package,
             'tourDates' => $tourDates,
             'pickupLocations' => $pickupLocations,
+            'tourTimes' => $tourTimes,
         ]);
     }
 }

@@ -15,8 +15,21 @@ import {
     DollarSign,
     Hash,
     Image as ImageIcon,
-    CalendarClock
+    CalendarClock,
+    CreditCard,
+    ReceiptText
 } from '@lucide/vue';
+
+export interface BookingPayment {
+    id: number;
+    amount: number;
+    payment_method: string;
+    payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | string;
+    paid_at?: string | null;
+    created_at?: string | null;
+    reference_number?: string | null;
+    proof_of_payment?: string | null;
+}
 
 export interface BookingViewData {
     id: number;
@@ -51,6 +64,7 @@ export interface BookingViewData {
     nationality: string;
     special_request: string | null;
     booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+    payments?: BookingPayment[];
     created_at: string;
     updated_at: string;
 }
@@ -76,6 +90,16 @@ const getStatusColor = (status: string) => {
 
 const getStatusLabel = (status: string) => {
     return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+const getPaymentStatusColor = (status: string) => {
+    const colors = {
+        paid: 'bg-green-100 text-green-700 border-green-200',
+        pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+        failed: 'bg-red-100 text-red-700 border-red-200',
+        refunded: 'bg-neutral-100 text-neutral-600 border-neutral-200',
+    };
+    return colors[status as keyof typeof colors] || 'bg-neutral-100 text-neutral-600 border-neutral-200';
 };
 
 const formatDate = (dateString: string) => {
@@ -117,6 +141,30 @@ const getPackagePrice = () => {
 
 const getTotalPrice = () => {
     return getPackagePrice() * (props.booking?.number_of_guests || 0);
+};
+
+const formatMethod = (method: string) => {
+    if (!method) return 'N/A';
+    return method
+        .split('_')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+};
+
+// Latest payment first, so the most recent attempt/confirmation is on top.
+// Falls back to 0 (treated as oldest) if created_at isn't present.
+const sortedPayments = () => {
+    return [...(props.booking?.payments ?? [])].sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return bTime - aTime;
+    });
+};
+
+const totalPaid = () => {
+    return (props.booking?.payments ?? [])
+        .filter((p) => p.payment_status === 'paid')
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 };
 </script>
 
@@ -221,6 +269,71 @@ const getTotalPrice = () => {
             </div>
         </div>
 
+        <!-- Payments - Full Width -->
+        <div class="rounded-lg border p-3">
+            <div class="flex items-center justify-between">
+                <p class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <CreditCard class="h-3.5 w-3.5" /> Payments
+                </p>
+                <p v-if="booking.payments && booking.payments.length > 0" class="text-xs text-muted-foreground">
+                    Total Paid: <span class="font-semibold text-foreground">{{ formatPrice(totalPaid()) }}</span>
+                </p>
+            </div>
+
+            <div v-if="booking.payments && booking.payments.length > 0" class="mt-2 space-y-2">
+                <div
+                    v-for="payment in sortedPayments()"
+                    :key="payment.id"
+                    class="flex flex-col gap-3 rounded-md border p-2.5 sm:flex-row sm:items-start sm:justify-between"
+                >
+                    <div class="flex items-start gap-2">
+                        <ReceiptText class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <p class="text-sm font-semibold">{{ formatPrice(payment.amount) }}</p>
+                                <Badge :class="getPaymentStatusColor(payment.payment_status)" class="text-[10px]">
+                                    {{ getStatusLabel(payment.payment_status) }}
+                                </Badge>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                {{ formatMethod(payment.payment_method) }}
+                                <span v-if="payment.reference_number"> &middot; Ref: {{ payment.reference_number }}</span>
+                            </p>
+                            <div class="text-left text-xs text-muted-foreground mt-1 sm:hidden">
+                                <p v-if="payment.paid_at">Paid: {{ formatDateTime(payment.paid_at) }}</p>
+                                <p v-if="payment.created_at">Submitted: {{ formatDateTime(payment.created_at) }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <!-- Proof of payment thumbnail, click to view full size -->
+                        <a
+                            v-if="payment.proof_of_payment"
+                            :href="`/storage/${payment.proof_of_payment}`"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Click to view full size proof of payment"
+                            class="block shrink-0 overflow-hidden rounded-md border transition-opacity hover:opacity-90"
+                        >
+                            <img
+                                :src="`/storage/${payment.proof_of_payment}`"
+                                alt="Proof of payment"
+                                class="h-16 w-16 object-cover"
+                            />
+                        </a>
+
+                        <div class="hidden text-left text-xs text-muted-foreground sm:block sm:text-right">
+                            <p v-if="payment.paid_at">Paid: {{ formatDateTime(payment.paid_at) }}</p>
+                            <p v-if="payment.created_at">Submitted: {{ formatDateTime(payment.created_at) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p v-else class="mt-1 text-sm text-muted-foreground">No payment records for this booking.</p>
+        </div>
+
         <!-- Package Description - Full Width -->
         <div v-if="booking.tour_date?.package?.description" class="rounded-lg border p-3">
             <p class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -229,18 +342,24 @@ const getTotalPrice = () => {
             <p class="text-sm mt-1">{{ booking.tour_date.package.description }}</p>
         </div>
 
-        <!-- Package Image - Full Width -->
+        <!-- Package Image - Full Width, larger + click to view full size -->
         <div v-if="booking.tour_date?.package?.image" class="rounded-lg border p-3">
             <p class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <ImageIcon class="h-3.5 w-3.5" /> Package Image
             </p>
-            <div class="mt-1">
+            <a
+                :href="`/storage/${booking.tour_date.package.image}`"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mt-2 block w-full max-w-md overflow-hidden rounded-md border transition-opacity hover:opacity-90"
+                title="Click to view full size"
+            >
                 <img 
                     :src="`/storage/${booking.tour_date.package.image}`" 
                     :alt="booking.tour_date.package.package_name"
-                    class="h-20 w-20 rounded-md object-cover"
+                    class="h-56 w-full object-cover"
                 />
-            </div>
+            </a>
         </div>
 
         <!-- Special Request - Full Width -->

@@ -31,6 +31,7 @@ class TourDate extends Model
         return $this->hasMany(TourTime::class);
     }
 
+
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);

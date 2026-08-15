@@ -61,11 +61,11 @@ const adminNavItems: NavItem[] = [
 
 // Operator: manages their own tour packages, schedules, and incoming bookings
 const operatorNavItems: NavItem[] = [
-    { title: 'Dashboard', href: '/operator/dashboard', icon: LayoutGrid },
-    { title: 'Packages', href: '/operator/packages', icon: Sailboat },
-    { title: 'Tour Dates', href: '/operator/tour-dates', icon: CalendarClock },
-    { title: 'Bookings', href: '/operator/bookings', icon: ClipboardCheck },
-    { title: 'Reminders', href: '/operator/reminders', icon: Bell },
+    { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutGrid },
+    { title: 'Packages', href: '/admin/packages', icon: Sailboat },
+    { title: 'Tour Dates', href: '/admin/tour-dates', icon: CalendarClock },
+    { title: 'Bookings', href: '/admin/bookings', icon: ClipboardCheck },
+    { title: 'Reminders', href: '/admin/reminders', icon: Bell },
 ];
 
 // Tourist: browses packages and manages their own bookings
@@ -97,7 +97,6 @@ const handleLogout = () => {
             <!-- Admin: full access to Admin, Operator, and Tourist sections -->
             <template v-if="isAdmin">
                 <NavMain label="Administrator" :items="adminNavItems" />
-                <NavMain label="Operator" :items="operatorNavItems" />
                 <NavMain label="Tourist" :items="touristNavItems" />
             </template>
 

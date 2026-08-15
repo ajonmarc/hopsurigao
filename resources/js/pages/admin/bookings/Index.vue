@@ -16,6 +16,8 @@ import {
 import FormDialog from '@/components/crud/FormDialog.vue';
 import DeleteDialog from '@/components/crud/DeleteDialog.vue';
 import BulkDeleteDialog from '@/components/crud/BulkDeleteDialog.vue';
+import ConfirmActionDialog from '@/components/crud/ConfirmActionDialog.vue';
+import ChangeStatusDialog from '@/components/crud/ChangeStatusDialog.vue';
 import { useServerTable } from '@/composables/useServerTable';
 import { debounce } from '@/lib/debounce';
 import { createColumns, type BookingRow } from './columns';
@@ -68,6 +70,9 @@ const perPage = computed(() => String(props.filters?.per_page ?? 10));
 const editingBooking = ref<BookingRow | null>(null);
 const deletingBooking = ref<BookingRow | null>(null);
 const viewingBooking = ref<BookingRow | null>(null);
+const confirmingPaymentBooking = ref<BookingRow | null>(null);
+// NEW: booking whose status is being changed
+const changingStatusBooking = ref<BookingRow | null>(null);
 const bulkDeleteOpen = ref(false);
 const viewDetailsOpen = ref(false);
 
@@ -76,6 +81,14 @@ const deleteAction = computed(() => {
     return {
         url: `/admin/bookings/${deletingBooking.value.id}`,
         method: 'delete' as const,
+    };
+});
+
+const confirmPaymentAction = computed(() => {
+    if (!confirmingPaymentBooking.value) return null;
+    return {
+        url: `/admin/bookings/${confirmingPaymentBooking.value.id}/confirm-payment`,
+        method: 'put' as const,
     };
 });
 
@@ -104,10 +117,31 @@ const handleEditFromView = () => {
     viewDetailsOpen.value = false;
 };
 
+const openConfirmPaymentDialog = (booking: BookingRow) => {
+    confirmingPaymentBooking.value = booking;
+};
+
+const handleConfirmPaymentSuccess = () => {
+    confirmingPaymentBooking.value = null;
+    router.reload();
+};
+
+// NEW: opens the change-status dialog for a row
+const openChangeStatusDialog = (booking: BookingRow) => {
+    changingStatusBooking.value = booking;
+};
+
+const handleStatusUpdateSuccess = () => {
+    changingStatusBooking.value = null;
+    router.reload();
+};
+
 const columns = createColumns(
     (booking) => (editingBooking.value = booking),
     (booking) => (deletingBooking.value = booking),
     (booking) => viewBookingDetails(booking),
+    (booking) => openConfirmPaymentDialog(booking),
+    (booking) => openChangeStatusDialog(booking),
 );
 
 const { table, runSearch } = useServerTable<BookingRow>({
@@ -407,17 +441,6 @@ const onDateFilterChange = (key: string, value: string) => {
         </FormDialog>
 
         <!-- Edit Booking Dialog -->
-        <FormDialog :open="!!editingBooking" title="Edit Booking" content-class="sm:max-w-3xl"
-            :description="editingBooking ? `Update booking for ${editingBooking.user?.name}` : undefined"
-            @update:open="(v) => !v && (editingBooking = null)">
-            <template #default="{ close }">
-                <BookingForm v-if="editingBookingFormValues" :booking="editingBookingFormValues" :tour-dates="tourDates"
-                    :pickup-locations="pickupLocations" :users="users" :submit-action="update(editingBooking!.id)"
-                    submit-label="Save Changes" :on-cancel="close" @success="editingBooking = null" />
-            </template>
-        </FormDialog>
-
-        <!-- Edit Booking Dialog -->
         <FormDialog :open="!!editingBooking" title="Edit Booking" content-class="sm:max-w-6xl"
             :description="editingBooking ? `Update booking for ${editingBooking.user?.name}` : undefined"
             @update:open="(v) => !v && (editingBooking = null)">
@@ -432,6 +455,31 @@ const onDateFilterChange = (key: string, value: string) => {
             ? `This will permanently delete the booking for ${deletingBooking.user?.name}. This action cannot be undone.`
             : ''
             " @update:open="(v) => !v && (deletingBooking = null)" />
+
+        <!-- Confirm Payment Dialog -->
+        <ConfirmActionDialog
+            :open="!!confirmingPaymentBooking"
+            :action="confirmPaymentAction"
+            title="Confirm Payment?"
+            confirm-label="Confirm Payment"
+            confirm-class="bg-green-600 hover:bg-green-700 text-white"
+            :description="confirmingPaymentBooking
+                ? `This will mark the payment for ${confirmingPaymentBooking.user?.name}'s booking as paid and confirm the booking.`
+                : ''
+            "
+            @update:open="(v) => !v && (confirmingPaymentBooking = null)"
+            @confirmed="handleConfirmPaymentSuccess"
+        />
+
+        <!-- Change Status Dialog -->
+        <ChangeStatusDialog
+            :open="!!changingStatusBooking"
+            :booking-id="changingStatusBooking?.id ?? null"
+            :current-status="changingStatusBooking?.booking_status ?? null"
+            :guest-name="changingStatusBooking?.user?.name ?? null"
+            @update:open="(v) => !v && (changingStatusBooking = null)"
+            @updated="handleStatusUpdateSuccess"
+        />
 
         <BulkDeleteDialog :open="bulkDeleteOpen" :count="selectedCount" :ids="selectedIds" item-label="booking"
             action="/admin/bookings-bulk-destroy" @update:open="bulkDeleteOpen = $event"

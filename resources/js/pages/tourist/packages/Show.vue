@@ -10,7 +10,8 @@ import {
     CheckCircle,
     Clock,
     Info,
-    AlertCircle
+    AlertCircle,
+    CalendarClock
 } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,11 @@ const props = defineProps<{
         name: string;
         address: string | null;
     }>;
+    tourTimes: Array<{
+        id: number;
+        time: string;
+        description: string;
+    }>;
 }>();
 
 const selectedTourDate = ref<string>('');
@@ -78,6 +84,18 @@ const formatDate = (dateString: string) => {
     });
 };
 
+const formatTime = (timeString: string) => {
+    if (!timeString) return 'N/A';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+    });
+};
+
 const selectedTourDateData = computed(() => {
     return props.tourDates.find(td => td.id === Number(selectedTourDate.value));
 });
@@ -97,7 +115,6 @@ const handleBookNow = () => {
         return;
     }
     
-    // Navigate to booking creation with selected data as query parameters
     const params = new URLSearchParams({
         tour_date_id: selectedTourDate.value,
         pickup_location_id: selectedPickupLocation.value,
@@ -179,7 +196,35 @@ const handleBookNow = () => {
                     </CardContent>
                 </Card>
 
-                <!-- Reminders -->
+                <!-- Schedules / Tour Times -->
+                <Card class="mt-6">
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2">
+                            <CalendarClock class="h-5 w-5 text-blue-500" />
+                            Schedules
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="tourTimes && tourTimes.length > 0" class="space-y-3">
+                            <div
+                                v-for="time in tourTimes"
+                                :key="time.id"
+                                class="flex items-center gap-4 rounded-lg border p-3"
+                            >
+                                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                    <Clock class="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p class="font-medium">{{ formatTime(time.time) }}</p>
+                                    <p class="text-sm text-muted-foreground">{{ time.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-else class="text-sm text-muted-foreground">No schedules available.</p>
+                    </CardContent>
+                </Card>
+
+                <!-- Important Reminders -->
                 <Card class="mt-6">
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">

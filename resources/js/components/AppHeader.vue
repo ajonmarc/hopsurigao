@@ -30,6 +30,8 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { getInitials } from '@/composables/useInitials';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import AppearanceTabs from '@/components/AppearanceTabs.vue';
+// NEW: tourist-facing booking notifications bell
+import TouristNotificationDropdown from '@/components/TouristNotificationDropdown.vue';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -126,13 +128,15 @@ const mainNavItems: NavItem[] = [
                 <!-- Right Side -->
                 <div class="ml-auto flex items-center space-x-2">
 
-
                     <AppearanceTabs />
 
                     <!-- Search -->
                     <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer" v-if="false">
                         <Search class="size-5 opacity-80 group-hover:opacity-100" />
                     </Button>
+
+                    <!-- NEW: booking notifications bell -->
+                    <TouristNotificationDropdown />
 
                     <!-- User Menu -->
                     <DropdownMenu>

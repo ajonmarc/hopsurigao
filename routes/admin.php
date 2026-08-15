@@ -9,11 +9,12 @@ use App\Http\Controllers\Admin\TimeController;
 use App\Http\Controllers\Admin\ReminderController;
 use App\Http\Controllers\Admin\PickupLocationController;
 use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\NotificationController;
 
 
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('role:Admin')->prefix('admin')->name('admin.')->group(function () {
+Route::middleware('role:Admin,Operator')->prefix('admin')->name('admin.')->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 
@@ -41,4 +42,15 @@ Route::middleware('role:Admin')->prefix('admin')->name('admin.')->group(function
 
     Route::resource('bookings', BookingController::class);
     Route::delete('bookings-bulk-destroy', [BookingController::class, 'bulkDestroy'])->name('bookings.bulk.destroy');
+
+
+    Route::put('bookings/{booking}/confirm-payment', [BookingController::class, 'confirmPayment'])
+    ->name('bookings.confirm-payment');
+
+
+    Route::put('bookings/{booking}/status', [BookingController::class, 'updateStatus'])
+    ->name('bookings.update-status');
+
+    Route::get('notifications/bookings', [NotificationController::class, 'bookings'])
+    ->name('notifications.bookings');
 });

@@ -17,7 +17,8 @@ import {
     Mail,
     Trash2,
     X,
-    Eye
+    Eye,
+    CreditCard
 } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +71,12 @@ const props = defineProps<{
                 name: string;
                 address: string | null;
             };
+            payments: Array<{
+                id: number;
+                amount: number;
+                payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
+                payment_method: string;
+            }>;
         }>;
         links: { url: string | null; label: string; active: boolean }[];
         from: number | null;
@@ -113,6 +120,20 @@ const getStatusIcon = (status: string) => {
 };
 
 const getStatusLabel = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+const getPaymentStatusColor = (status: string) => {
+    const colors = {
+        pending: 'bg-yellow-100 text-yellow-700',
+        paid: 'bg-green-100 text-green-700',
+        failed: 'bg-red-100 text-red-700',
+        refunded: 'bg-gray-100 text-gray-700',
+    };
+    return colors[status as keyof typeof colors] || 'bg-neutral-100 text-neutral-600';
+};
+
+const getPaymentStatusLabel = (status: string) => {
     return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
@@ -354,6 +375,31 @@ const onFilterChange = () => {
                             <p class="flex items-center gap-1 text-sm">
                                 #{{ booking.id }}
                             </p>
+                        </div>
+                    </div>
+
+                    <!-- Payment Status -->
+                    <div class="mt-4 border-t pt-4">
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center gap-2 text-sm font-medium">
+                                <CreditCard class="h-4 w-4" />
+                                Payment Status
+                            </span>
+                            <div v-if="booking.payments && booking.payments.length > 0">
+                                <Badge :class="getPaymentStatusColor(booking.payments[0].payment_status)">
+                                    {{ getPaymentStatusLabel(booking.payments[0].payment_status) }}
+                                </Badge>
+                            </div>
+                            <div v-else>
+                                <Badge class="bg-gray-100 text-gray-600">
+                                    No Payment
+                                </Badge>
+                            </div>
+                        </div>
+                        <div v-if="booking.payments && booking.payments.length > 0" class="mt-2 text-sm text-muted-foreground">
+                            <span>Amount: {{ formatPrice(booking.payments[0].amount) }}</span>
+                            <span class="mx-2">|</span>
+                            <span>Method: {{ booking.payments[0].payment_method.toUpperCase().replace('_', ' ') }}</span>
                         </div>
                     </div>
 

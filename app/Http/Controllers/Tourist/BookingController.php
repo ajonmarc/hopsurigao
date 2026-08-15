@@ -23,9 +23,10 @@ class BookingController extends Controller
         $bookings = Auth::user()
             ->bookings()
             ->with([
-                'tourDate.package:id,package_name,image,description,price', // Added 'price' here
+                'tourDate.package:id,package_name,image,description,price',
                 'pickupLocation:id,name,address',
-                'tourDate:id,tour_date,package_id,capacity'
+                'tourDate:id,tour_date,package_id,capacity',
+                'payments'
             ])
             ->when(
                 $request->input('status'),
@@ -144,11 +145,10 @@ class BookingController extends Controller
             return redirect()->back();
         }
 
-        Booking::create($data);
+        $booking = Booking::create($data);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Booking created successfully!']);
-
-        return redirect()->route('tourist.bookings.index');
+        // Redirect to payment page with booking_id
+        return redirect()->route('tourist.payments.create', ['booking_id' => $booking->id]);
     }
 
     public function show(Booking $booking): Response
@@ -161,6 +161,7 @@ class BookingController extends Controller
             'tourDate.package:id,package_name,image,description,price',
             'tourDate:id,tour_date,package_id,capacity',
             'pickupLocation:id,name,address',
+            'payments',
         ]);
 
         return Inertia::render('tourist/bookings/Show', [

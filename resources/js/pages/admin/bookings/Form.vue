@@ -77,15 +77,10 @@ const selectedPickupLocation = ref<string | undefined>(
         : undefined
 );
 
-const selectedStatus = ref<string | undefined>(
-    props.booking?.booking_status ?? 'pending'
-);
-
 watch(() => props.booking, (newBooking) => {
     selectedUser.value = newBooking?.user_id ? String(newBooking.user_id) : undefined;
     selectedTourDate.value = newBooking?.tour_date_id ? String(newBooking.tour_date_id) : undefined;
     selectedPickupLocation.value = newBooking?.pickup_location_id ? String(newBooking.pickup_location_id) : undefined;
-    selectedStatus.value = newBooking?.booking_status ?? 'pending';
 }, { immediate: true });
 
 const handleUserChange = (value: AcceptableValue) => {
@@ -98,10 +93,6 @@ const handleTourDateChange = (value: AcceptableValue) => {
 
 const handlePickupLocationChange = (value: AcceptableValue) => {
     selectedPickupLocation.value = value === null || value === undefined ? undefined : String(value);
-};
-
-const handleStatusChange = (value: AcceptableValue) => {
-    selectedStatus.value = value === null || value === undefined ? undefined : String(value);
 };
 </script>
 
@@ -218,24 +209,6 @@ const handleStatusChange = (value: AcceptableValue) => {
                     placeholder="e.g. Filipino, American, etc."
                 />
                 <InputError :message="errors.nationality" />
-            </div>
-
-            <!-- Booking Status -->
-            <div class="grid gap-2">
-                <Label for="booking_status">Booking Status</Label>
-                <input type="hidden" name="booking_status" :value="selectedStatus" />
-                <Select :model-value="selectedStatus" @update:model-value="handleStatusChange">
-                    <SelectTrigger id="booking_status" class="w-full">
-                        <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                </Select>
-                <InputError :message="errors.booking_status" />
             </div>
 
             <!-- Special Request -->

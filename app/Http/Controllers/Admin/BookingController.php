@@ -27,7 +27,9 @@ class BookingController extends Controller
             ->with([
                 'user:id,name,email',
                 'tourDate.package:id,package_name,price,description,image,destination,status',
-                'pickupLocation:id,name,address'
+                'pickupLocation:id,name,address',
+                // NEW: needed so the admin table/columns can read payment_status
+                'payments',
             ])
             ->when(
                 $request->input('search'),
@@ -93,7 +95,7 @@ class BookingController extends Controller
                         }
                     }
                 },
-                fn (Builder $query) => $query->latest()
+                fn(Builder $query) => $query->latest()
             )
             ->paginate($perPage)
             ->withQueryString();
@@ -130,9 +132,14 @@ class BookingController extends Controller
             'pickupLocations' => $pickupLocations,
             'users' => $users,
             'filters' => $request->only(
-                'sort', 'search', 'per_page', 
-                'booking_status', 'package_id', 'tour_date_id',
-                'from_date', 'to_date'
+                'sort',
+                'search',
+                'per_page',
+                'booking_status',
+                'package_id',
+                'tour_date_id',
+                'from_date',
+                'to_date'
             ),
         ]);
     }
@@ -183,7 +190,8 @@ class BookingController extends Controller
         $booking->load([
             'user:id,name,email',
             'tourDate.package:id,package_name,price,description,image,destination,status',
-            'pickupLocation:id,name,address'
+            'pickupLocation:id,name,address',
+            'payments', // NEW
         ]);
 
         $tourDates = TourDate::with('package:id,package_name')
@@ -248,5 +256,52 @@ class BookingController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => "{$deleted} booking(s) deleted successfully."]);
 
         return redirect()->route('admin.bookings.index');
+    }
+
+    /**
+     * NEW: Admin confirms a booking's payment.
+     * Marks the latest payment record as 'paid', stamps paid_at,
+     * and bumps the booking to 'confirmed' if it was still 'pending'.
+     */
+    public function confirmPayment(Booking $booking): RedirectResponse
+    {
+        $payment = $booking->payments()->latest()->first();
+
+        if (!$payment) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'No payment record found for this booking.']);
+            return redirect()->back();
+        }
+
+        if ($payment->payment_status === 'paid') {
+            Inertia::flash('toast', ['type' => 'info', 'message' => 'This payment is already confirmed.']);
+            return redirect()->back();
+        }
+
+        $payment->update([
+            'payment_status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        if ($booking->booking_status === 'pending') {
+            $booking->update(['booking_status' => 'confirmed']);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Payment confirmed and booking marked as confirmed.']);
+
+        return redirect()->back();
+    }
+
+
+    public function updateStatus(Request $request, Booking $booking): RedirectResponse
+    {
+        $data = $request->validate([
+            'booking_status' => ['required', 'in:pending,confirmed,cancelled,completed'],
+        ]);
+
+        $booking->update($data);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Booking status updated.']);
+
+        return redirect()->back();
     }
 }

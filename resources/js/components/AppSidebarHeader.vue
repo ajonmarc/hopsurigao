@@ -13,6 +13,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import AppearanceTabs from '@/components/AppearanceTabs.vue'; 
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue';
+import NotificationDropdown from '@/components/NotificationDropdown.vue';
 import { getInitials } from '@/composables/useInitials';
 import type { BreadcrumbItem } from '@/types';
 
@@ -43,6 +44,9 @@ const auth = computed(() => page.props.auth);
                  <ThemeSwitcher v-if="false" />
                 <AppearanceTabs />
 
+                <!-- NEW: booking notifications bell -->
+                <NotificationDropdown />
+
                 <DropdownMenu>
                     <DropdownMenuTrigger :as-child="true">
                         <Button variant="ghost" size="icon"
@@ -64,4 +68,4 @@ const auth = computed(() => page.props.auth);
             </div>
         </div>
     </header>
-</template> 
+</template>

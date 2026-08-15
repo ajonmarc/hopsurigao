@@ -4,6 +4,7 @@
 use App\Http\Controllers\Tourist\DashboardController;
 use App\Http\Controllers\Tourist\PackageController;
 use App\Http\Controllers\Tourist\BookingController;
+use App\Http\Controllers\Tourist\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('role:Tourist,Admin')->prefix('tourist')->name('tourist.')->group(function () {
@@ -20,4 +21,15 @@ Route::middleware('role:Tourist,Admin')->prefix('tourist')->name('tourist.')->gr
     Route::get('bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
     Route::delete('bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
     Route::put('bookings/{booking}/cancel', [BookingController::class, 'cancel'])->name('bookings.cancel');
+
+
+  // Payment routes
+        Route::get('payments/create', [PaymentController::class, 'create'])->name('payments.create');
+        Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
+        Route::get('payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
+
+
+      
+    Route::get('notifications/bookings', [\App\Http\Controllers\Tourist\NotificationController::class, 'bookings'])
+        ->name('notifications.bookings');
 });

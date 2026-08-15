@@ -76,12 +76,13 @@ const totalPrice = computed(() => {
     return props.tourDate.package.price * form.number_of_guests;
 });
 
+// FIX: Removed the onSuccess override that was forcing a redirect back to
+// /tourist/bookings. The server (BookingController::store) already redirects
+// to tourist.payments.create on success, and Inertia follows that redirect
+// automatically. The old onSuccess callback was firing right after and
+// navigating the user away from the payment page back to the bookings list.
 const submitBooking = () => {
-    form.post('/tourist/bookings', {
-        onSuccess: () => {
-            router.get('/tourist/bookings');
-        },
-    });
+    form.post('/tourist/bookings');
 };
 </script>
 
