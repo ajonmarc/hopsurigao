@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\JsonResponse;
 
 class BookingController extends Controller
 {
@@ -303,5 +304,55 @@ class BookingController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Booking status updated.']);
 
         return redirect()->back();
+    }
+
+
+
+    public function verifyQr(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'qr_token' => ['required', 'string'],
+        ]);
+
+        $booking = Booking::query()
+            ->where('qr_token', $data['qr_token'])
+            ->with([
+                'user:id,name,email',
+                'tourDate:id,tour_date,package_id',
+                'tourDate.package:id,package_name',
+                'pickupLocation:id,name',
+            ])
+            ->first();
+
+        if (!$booking) {
+            return response()->json([
+                'found' => false,
+                'message' => 'No booking found for this QR code.',
+            ], 404);
+        }
+
+        if ($booking->booking_status === 'cancelled') {
+            return response()->json([
+                'found' => true,
+                'valid' => false,
+                'message' => 'This booking was cancelled.',
+                'booking' => $booking,
+            ], 200);
+        }
+
+        return response()->json([
+            'found' => true,
+            'valid' => true,
+            'booking' => [
+                'id' => $booking->id,
+                'guest_name' => $booking->user->name ?? 'Guest',
+                'guest_email' => $booking->user->email ?? null,
+                'package_name' => $booking->tourDate->package->package_name ?? 'N/A',
+                'tour_date' => optional($booking->tourDate->tour_date)->format('F j, Y'),
+                'pickup_location' => $booking->pickupLocation->name ?? 'N/A',
+                'number_of_guests' => $booking->number_of_guests,
+                'booking_status' => $booking->booking_status,
+            ],
+        ]);
     }
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ReminderController;
 use App\Http\Controllers\Admin\PickupLocationController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\BookingScanController;
 
 
 use Illuminate\Support\Facades\Route;
@@ -33,10 +34,10 @@ Route::middleware('role:Admin,Operator')->prefix('admin')->name('admin.')->group
     Route::resource('times', TimeController::class);
     Route::delete('times-bulk-destroy', [TimeController::class, 'bulkDestroy'])->name('times.bulk.destroy');
 
-     Route::resource('reminders', ReminderController::class);
+    Route::resource('reminders', ReminderController::class);
     Route::delete('reminders-bulk-destroy', [ReminderController::class, 'bulkDestroy'])->name('reminders.bulk.destroy');
 
-     Route::resource('pickup-locations', PickupLocationController::class);
+    Route::resource('pickup-locations', PickupLocationController::class);
     Route::delete('pickup-locations-bulk-destroy', [PickupLocationController::class, 'bulkDestroy'])->name('pickup-locations.bulk.destroy');
 
 
@@ -45,12 +46,16 @@ Route::middleware('role:Admin,Operator')->prefix('admin')->name('admin.')->group
 
 
     Route::put('bookings/{booking}/confirm-payment', [BookingController::class, 'confirmPayment'])
-    ->name('bookings.confirm-payment');
+        ->name('bookings.confirm-payment');
 
 
     Route::put('bookings/{booking}/status', [BookingController::class, 'updateStatus'])
-    ->name('bookings.update-status');
+        ->name('bookings.update-status');
 
     Route::get('notifications/bookings', [NotificationController::class, 'bookings'])
-    ->name('notifications.bookings');
+        ->name('notifications.bookings');
+
+
+  Route::get('bookings-scan', [BookingScanController::class, 'index'])->name('bookings-scan.index');
+Route::post('bookings-scan/verify', [BookingScanController::class, 'verify'])->name('bookings-scan.verify');
 });

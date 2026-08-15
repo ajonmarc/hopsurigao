@@ -37,12 +37,16 @@ return new class extends Migration
             // Optional request
             $table->text('special_request')->nullable();
 
+            // Booking status
             $table->enum('booking_status', [
                 'pending',
                 'confirmed',
                 'cancelled',
                 'completed',
             ])->default('pending');
+
+            // Unique token used to identify and verify this booking's QR code
+            $table->string('qr_token')->unique()->nullable();
 
             $table->timestamps();
         });

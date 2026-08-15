@@ -23,13 +23,18 @@ Route::middleware('role:Tourist,Admin')->prefix('tourist')->name('tourist.')->gr
     Route::put('bookings/{booking}/cancel', [BookingController::class, 'cancel'])->name('bookings.cancel');
 
 
-  // Payment routes
-        Route::get('payments/create', [PaymentController::class, 'create'])->name('payments.create');
-        Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
-        Route::get('payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
+    // Payment routes
+    Route::get('payments/create', [PaymentController::class, 'create'])->name('payments.create');
+    Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
+    Route::get('payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
 
 
-      
+
     Route::get('notifications/bookings', [\App\Http\Controllers\Tourist\NotificationController::class, 'bookings'])
         ->name('notifications.bookings');
+
+
+
+    Route::get('bookings/{booking}/edit', [BookingController::class, 'edit'])->name('bookings.edit');
+    Route::put('bookings/{booking}', [BookingController::class, 'update'])->name('bookings.update');
 });

@@ -18,7 +18,8 @@ import {
     Trash2,
     X,
     Eye,
-    CreditCard
+    CreditCard,
+    QrCode
 } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +40,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import DeleteDialog from '@/components/crud/DeleteDialog.vue';
+import QrCodeDisplay from '@/components/QrCodeDisplay.vue';
 import tourist from '@/routes/tourist';
 
 const props = defineProps<{
@@ -53,6 +55,7 @@ const props = defineProps<{
             nationality: string;
             special_request: string | null;
             booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+            qr_token: string | null;
             created_at: string;
             tour_date: {
                 id: number;
@@ -98,6 +101,12 @@ const showDeleteDialog = ref(false);
 const showCancelDialog = ref(false);
 const selectedBookingId = ref<number | null>(null);
 const selectedBookingName = ref<string>('');
+
+// QR code dialog state
+const showQrDialog = ref(false);
+const qrBookingToken = ref<string | null>(null);
+const qrBookingId = ref<number | null>(null);
+const qrDisplayRef = ref<InstanceType<typeof QrCodeDisplay> | null>(null);
 
 const getStatusColor = (status: string) => {
     const colors = {
@@ -176,6 +185,18 @@ const canDelete = (status: string) => {
     return ['pending', 'cancelled'].includes(status);
 };
 
+// Matches the backend's EDITABLE_STATUSES — only pending bookings can
+// be edited by the tourist directly.
+const canEdit = (status: string) => {
+    return status === 'pending';
+};
+
+// QR codes only make sense for bookings the operator will actually be
+// checking someone in for — a cancelled booking shouldn't be scannable.
+const canShowQr = (status: string) => {
+    return ['pending', 'confirmed', 'completed'].includes(status);
+};
+
 const openCancelDialog = (booking: typeof props.bookings.data[0]) => {
     selectedBookingId.value = booking.id;
     selectedBookingName.value = booking.tour_date.package.package_name;
@@ -186,6 +207,17 @@ const openDeleteDialog = (booking: typeof props.bookings.data[0]) => {
     selectedBookingId.value = booking.id;
     selectedBookingName.value = booking.tour_date.package.package_name;
     showDeleteDialog.value = true;
+};
+
+const openQrDialog = (booking: typeof props.bookings.data[0]) => {
+    if (!booking.qr_token) return;
+    qrBookingToken.value = booking.qr_token;
+    qrBookingId.value = booking.id;
+    showQrDialog.value = true;
+};
+
+const downloadQr = () => {
+    qrDisplayRef.value?.download();
 };
 
 const handleCancelSuccess = () => {
@@ -267,7 +299,7 @@ const onFilterChange = () => {
                 <!-- Header with Package Name and Status -->
                 <div class="border-b bg-muted/30 px-6 py-4">
                     <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-                        <div class="flex items-center gap-4">
+                        <div class="flex min-w-0 items-center gap-4">
                             <div class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                                 <img 
                                     v-if="booking.tour_date.package.image"
@@ -279,7 +311,7 @@ const onFilterChange = () => {
                                     <Package class="h-6 w-6 text-muted-foreground" />
                                 </div>
                             </div>
-                            <div>
+                            <div class="min-w-0">
                                 <Link 
                                     :href="`/tourist/packages/${booking.tour_date.package.id}`"
                                     class="text-lg font-semibold hover:underline"
@@ -291,12 +323,29 @@ const onFilterChange = () => {
                                 </p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                             <Badge :class="getStatusColor(booking.booking_status)">
                                 <component :is="getStatusIcon(booking.booking_status)" class="mr-1 h-3 w-3" />
                                 {{ getStatusLabel(booking.booking_status) }}
                             </Badge>
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
+                                <Button
+                                    v-if="canShowQr(booking.booking_status) && booking.qr_token"
+                                    variant="secondary"
+                                    size="sm"
+                                    @click="openQrDialog(booking)"
+                                >
+                                    <QrCode class="mr-1.5 h-4 w-4 shrink-0" />
+                                    <span>QR Code</span>
+                                </Button>
+                                <Button
+                                    v-if="canEdit(booking.booking_status)"
+                                    as-child
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    <Link :href="`/tourist/bookings/${booking.id}/edit`">Edit</Link>
+                                </Button>
                                 <Button 
                                     v-if="canCancel(booking.booking_status)" 
                                     variant="destructive" 
@@ -321,56 +370,56 @@ const onFilterChange = () => {
                 <!-- Booking Details Grid -->
                 <CardContent class="p-6">
                     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-xs font-medium text-muted-foreground">Tour Date</p>
                             <p class="flex items-center gap-1 text-sm">
-                                <Calendar class="h-3 w-3 text-muted-foreground" />
-                                {{ formatDate(booking.tour_date.tour_date) }}
+                                <Calendar class="h-3 w-3 shrink-0 text-muted-foreground" />
+                                <span class="truncate">{{ formatDate(booking.tour_date.tour_date) }}</span>
                             </p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-xs font-medium text-muted-foreground">Guests</p>
                             <p class="flex items-center gap-1 text-sm">
-                                <Users class="h-3 w-3 text-muted-foreground" />
-                                {{ booking.number_of_guests }} guests
+                                <Users class="h-3 w-3 shrink-0 text-muted-foreground" />
+                                <span class="truncate">{{ booking.number_of_guests }} guests</span>
                             </p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-xs font-medium text-muted-foreground">Pickup Location</p>
                             <p class="flex items-center gap-1 text-sm">
-                                <MapPin class="h-3 w-3 text-muted-foreground" />
-                                {{ booking.pickup_location?.name || 'N/A' }}
+                                <MapPin class="h-3 w-3 shrink-0 text-muted-foreground" />
+                                <span class="truncate">{{ booking.pickup_location?.name || 'N/A' }}</span>
                             </p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-xs font-medium text-muted-foreground">Price</p>
                             <p class="flex items-center gap-1 text-sm">
-                                {{ formatPrice(booking.tour_date.package.price) }}
-                                <span class="text-xs text-muted-foreground">per person</span>
+                                <span class="truncate">{{ formatPrice(booking.tour_date.package.price) }}</span>
+                                <span class="shrink-0 text-xs text-muted-foreground">per person</span>
                             </p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-xs font-medium text-muted-foreground">Phone</p>
                             <p class="flex items-center gap-1 text-sm">
-                                <Phone class="h-3 w-3 text-muted-foreground" />
-                                {{ booking.phone_number }}
+                                <Phone class="h-3 w-3 shrink-0 text-muted-foreground" />
+                                <span class="truncate">{{ booking.phone_number }}</span>
                             </p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-xs font-medium text-muted-foreground">Nationality</p>
                             <p class="flex items-center gap-1 text-sm">
-                                <Globe class="h-3 w-3 text-muted-foreground" />
-                                {{ booking.nationality }}
+                                <Globe class="h-3 w-3 shrink-0 text-muted-foreground" />
+                                <span class="truncate">{{ booking.nationality }}</span>
                             </p>
                         </div>
-                        <div>
+                        <div class="min-w-0 col-span-2 sm:col-span-1">
                             <p class="text-xs font-medium text-muted-foreground">Booked On</p>
                             <p class="flex items-center gap-1 text-sm">
-                                <Clock class="h-3 w-3 text-muted-foreground" />
-                                {{ formatDateTime(booking.created_at) }}
+                                <Clock class="h-3 w-3 shrink-0 text-muted-foreground" />
+                                <span class="truncate">{{ formatDateTime(booking.created_at) }}</span>
                             </p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-xs font-medium text-muted-foreground">Booking ID</p>
                             <p class="flex items-center gap-1 text-sm">
                                 #{{ booking.id }}
@@ -464,5 +513,29 @@ const onFilterChange = () => {
             @update:open="(val) => { showDeleteDialog = val; if (!val) { selectedBookingId = null; selectedBookingName = ''; } }"
             @deleted="handleDeleteSuccess"
         />
+
+        <!-- QR Code Dialog -->
+        <Dialog :open="showQrDialog" @update:open="(v) => { showQrDialog = v; if (!v) { qrBookingToken = null; qrBookingId = null; } }">
+            <DialogContent class="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Booking QR Code</DialogTitle>
+                    <DialogDescription>
+                        Show this code to the tour operator at pickup. Booking #{{ qrBookingId }}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="flex flex-col items-center gap-4 py-2">
+                    <QrCodeDisplay
+                        v-if="qrBookingToken"
+                        ref="qrDisplayRef"
+                        :value="qrBookingToken"
+                        :size="240"
+                    />
+                    <Button variant="outline" size="sm" class="w-full" @click="downloadQr">
+                        Download QR Code
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

@@ -12,6 +12,7 @@ import {
     Package,
     Bell,
     Clock,
+    QrCode,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -57,6 +58,7 @@ const adminNavItems: NavItem[] = [
     { title: 'Pickup Locations', href: '/admin/pickup-locations', icon: MapPin },
     { title: 'Bookings', href: '/admin/bookings', icon: ClipboardCheck },
     { title: 'Reminders', href: '/admin/reminders', icon: Bell },
+    { title: 'QR Codes', href: '/admin/bookings-scan', icon: QrCode },
 ];
 
 // Operator: manages their own tour packages, schedules, and incoming bookings
@@ -66,6 +68,7 @@ const operatorNavItems: NavItem[] = [
     { title: 'Tour Dates', href: '/admin/tour-dates', icon: CalendarClock },
     { title: 'Bookings', href: '/admin/bookings', icon: ClipboardCheck },
     { title: 'Reminders', href: '/admin/reminders', icon: Bell },
+    { title: 'QR Codes', href: '/admin/bookings-scan', icon: QrCode },
 ];
 
 // Tourist: browses packages and manages their own bookings
