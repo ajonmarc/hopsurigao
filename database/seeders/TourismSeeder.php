@@ -7,11 +7,13 @@ use App\Models\Inclusion;
 use App\Models\Package;
 use App\Models\Payment;
 use App\Models\PickupLocation;
+use App\Models\PickupSchedule;
 use App\Models\Reminder;
 use App\Models\TourDate;
 use App\Models\TourTime;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class TourismSeeder extends Seeder
 {
@@ -58,7 +60,6 @@ class TourismSeeder extends Seeder
             'price' => 1800.00,
             'status' => 'inactive',
         ]);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -114,7 +115,6 @@ class TourismSeeder extends Seeder
             ]);
         }
 
-
         /*
         |--------------------------------------------------------------------------
         | Reminders
@@ -155,7 +155,6 @@ class TourismSeeder extends Seeder
             ]);
         }
 
-
         /*
         |--------------------------------------------------------------------------
         | Tour Dates
@@ -191,7 +190,6 @@ class TourismSeeder extends Seeder
             'tour_date' => '2026-09-15',
             'capacity' => 8,
         ]);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -234,7 +232,6 @@ class TourismSeeder extends Seeder
             ]);
         }
 
-
         /*
         |--------------------------------------------------------------------------
         | Pickup Locations
@@ -269,6 +266,47 @@ class TourismSeeder extends Seeder
             'status' => 'inactive',
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Pickup Schedules
+        |--------------------------------------------------------------------------
+        |
+        | Bookings now reference a specific pickup schedule (tour date + pickup
+        | location + pickup time) instead of a pickup location directly.
+        |
+        */
+
+        $schedule1 = PickupSchedule::create([
+            'tour_date_id' => $date1->id,
+            'pickup_location_id' => $pickup1->id,
+            'pickup_time' => '07:30:00',
+        ]);
+
+        $schedule2 = PickupSchedule::create([
+            'tour_date_id' => $date2->id,
+            'pickup_location_id' => $pickup2->id,
+            'pickup_time' => '07:30:00',
+        ]);
+
+        $schedule3 = PickupSchedule::create([
+            'tour_date_id' => $date3->id,
+            'pickup_location_id' => $pickup3->id,
+            'pickup_time' => '06:30:00',
+        ]);
+
+        // A couple of extra schedules so date4/date5 have options too,
+        // even though no booking uses them yet.
+        PickupSchedule::create([
+            'tour_date_id' => $date4->id,
+            'pickup_location_id' => $pickup1->id,
+            'pickup_time' => '08:00:00',
+        ]);
+
+        PickupSchedule::create([
+            'tour_date_id' => $date5->id,
+            'pickup_location_id' => $pickup2->id,
+            'pickup_time' => '06:00:00',
+        ]);
 
         /*
         |--------------------------------------------------------------------------
@@ -282,40 +320,41 @@ class TourismSeeder extends Seeder
         $users = User::orderBy('id')->take(3)->get();
 
         if ($users->count() >= 3) {
-
             $booking1 = Booking::create([
                 'user_id' => $users[0]->id,
                 'tour_date_id' => $date1->id,
-                'pickup_location_id' => $pickup1->id,
+                'pickup_schedule_id' => $schedule1->id,
                 'number_of_guests' => 4,
                 'phone_number' => '09171234567',
                 'nationality' => 'Filipino',
                 'special_request' => 'Vegetarian meal.',
                 'booking_status' => 'confirmed',
+                'qr_token' => 'QR-' . Str::random(32) . '-1',
             ]);
 
             $booking2 = Booking::create([
                 'user_id' => $users[1]->id,
                 'tour_date_id' => $date2->id,
-                'pickup_location_id' => $pickup2->id,
+                'pickup_schedule_id' => $schedule2->id,
                 'number_of_guests' => 2,
                 'phone_number' => '09179876543',
                 'nationality' => 'Filipino',
                 'special_request' => null,
                 'booking_status' => 'pending',
+                'qr_token' => 'QR-' . Str::random(32) . '-2',
             ]);
 
             $booking3 = Booking::create([
                 'user_id' => $users[2]->id,
                 'tour_date_id' => $date3->id,
-                'pickup_location_id' => $pickup3->id,
+                'pickup_schedule_id' => $schedule3->id,
                 'number_of_guests' => 5,
                 'phone_number' => '09175555555',
                 'nationality' => 'Filipino',
                 'special_request' => 'Need additional drinking water.',
                 'booking_status' => 'completed',
+                'qr_token' => 'QR-' . Str::random(32) . '-3',
             ]);
-
 
             /*
             |--------------------------------------------------------------------------

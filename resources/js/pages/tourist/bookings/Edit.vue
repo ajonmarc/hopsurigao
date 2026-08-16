@@ -19,7 +19,7 @@ import tourist from '@/routes/tourist';
 const props = defineProps<{
     booking: {
         id: number;
-        pickup_location_id: number;
+        pickup_schedule_id: number; // CHANGED
         number_of_guests: number;
         phone_number: string;
         nationality: string;
@@ -33,12 +33,23 @@ const props = defineProps<{
                 price: number | null;
             };
         };
-        pickup_location: {
+        // CHANGED: pickup location now nested under pickup_schedule
+        pickup_schedule: {
             id: number;
-            name: string;
+            pickup_time: string;
+            pickup_location: {
+                id: number;
+                name: string;
+            };
         };
     };
-    pickupLocations: Array<{ id: number; name: string; address: string | null }>;
+    // CHANGED: was pickupLocations
+    pickupSchedules: Array<{
+        id: number;
+        tour_date_id: number;
+        pickup_location_id: number;
+        label: string;
+    }>;
     availableSpots: number;
 }>();
 
@@ -52,7 +63,7 @@ defineOptions({
 });
 
 const form = useForm({
-    pickup_location_id: props.booking.pickup_location_id,
+    pickup_schedule_id: props.booking.pickup_schedule_id,
     number_of_guests: props.booking.number_of_guests,
     phone_number: props.booking.phone_number,
     nationality: props.booking.nationality,
@@ -121,24 +132,24 @@ const submit = () => {
         <!-- Editable fields -->
         <form class="mt-6 space-y-5" @submit.prevent="submit">
             <div>
-                <Label for="pickup_location_id" class="mb-1.5 flex items-center gap-1.5">
-                    <MapPin class="h-3.5 w-3.5" /> Pickup Location
+                <Label for="pickup_schedule_id" class="mb-1.5 flex items-center gap-1.5">
+                    <MapPin class="h-3.5 w-3.5" /> Pickup Location & Time
                 </Label>
                 <Select
-                    :model-value="String(form.pickup_location_id)"
-                    @update:model-value="(v) => form.pickup_location_id = Number(v)"
+                    :model-value="String(form.pickup_schedule_id)"
+                    @update:model-value="(v) => form.pickup_schedule_id = Number(v)"
                 >
-                    <SelectTrigger id="pickup_location_id" class="w-full">
-                        <SelectValue placeholder="Select pickup location" />
+                    <SelectTrigger id="pickup_schedule_id" class="w-full">
+                        <SelectValue placeholder="Select pickup location & time" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem v-for="loc in pickupLocations" :key="loc.id" :value="String(loc.id)">
-                            {{ loc.name }}
+                        <SelectItem v-for="schedule in pickupSchedules" :key="schedule.id" :value="String(schedule.id)">
+                            {{ schedule.label }}
                         </SelectItem>
                     </SelectContent>
                 </Select>
-                <p v-if="form.errors.pickup_location_id" class="mt-1 text-sm text-destructive">
-                    {{ form.errors.pickup_location_id }}
+                <p v-if="form.errors.pickup_schedule_id" class="mt-1 text-sm text-destructive">
+                    {{ form.errors.pickup_schedule_id }}
                 </p>
             </div>
 

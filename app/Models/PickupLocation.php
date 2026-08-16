@@ -14,6 +14,11 @@ class PickupLocation extends Model
         'status',
     ];
 
+    public function pickupSchedules(): HasMany
+    {
+        return $this->hasMany(PickupSchedule::class);
+    }
+
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);

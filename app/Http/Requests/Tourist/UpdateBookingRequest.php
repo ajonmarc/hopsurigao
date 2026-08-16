@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests\Tourist;
 
+use App\Models\PickupSchedule;
 use App\Models\TourDate;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Validator;
 
 class UpdateBookingRequest extends FormRequest
@@ -20,7 +20,7 @@ class UpdateBookingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'pickup_location_id' => ['required', 'exists:pickup_locations,id'],
+            'pickup_schedule_id' => ['required', 'exists:pickup_schedules,id'],
             'number_of_guests' => ['required', 'integer', 'min:1'],
             'phone_number' => ['required', 'string', 'max:30'],
             'nationality' => ['required', 'string', 'max:100'],
@@ -29,9 +29,12 @@ class UpdateBookingRequest extends FormRequest
     }
 
     /**
-     * Cross-field check: make sure the new guest count still fits in
-     * the tour date's remaining capacity (excluding this booking's own
-     * current guest count from the "already booked" tally).
+     * Cross-field checks:
+     * 1. New guest count still fits in the tour date's remaining capacity
+     *    (excluding this booking's own current guest count from the tally).
+     * 2. The chosen pickup schedule actually belongs to this booking's
+     *    tour date — tourists can't change tour_date_id here, so a
+     *    schedule from a different tour date would be invalid.
      */
     public function withValidator(Validator $validator): void
     {
@@ -62,6 +65,21 @@ class UpdateBookingRequest extends FormRequest
                     'number_of_guests',
                     "Only {$availableSpots} spot(s) available for this tour date."
                 );
+            }
+
+            // NEW: pickup schedule must belong to this booking's tour date
+            $pickupScheduleId = $this->input('pickup_schedule_id');
+            if ($pickupScheduleId) {
+                $belongs = PickupSchedule::where('id', $pickupScheduleId)
+                    ->where('tour_date_id', $booking->tour_date_id)
+                    ->exists();
+
+                if (!$belongs) {
+                    $validator->errors()->add(
+                        'pickup_schedule_id',
+                        'The selected pickup schedule does not belong to this booking\'s tour date.'
+                    );
+                }
             }
         });
     }

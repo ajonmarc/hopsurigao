@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { 
-    ArrowLeft, 
-    Calendar, 
-    Users, 
-    Package, 
+import {
+    ArrowLeft,
+    Calendar,
+    Users,
+    Package,
     MapPin,
     CreditCard,
     Upload,
@@ -45,10 +45,15 @@ const props = defineProps<{
                 image: string | null;
             };
         };
-        pickup_location: {
+        // CHANGED: pickup_location -> pickup_schedule
+        pickup_schedule: {
             id: number;
-            name: string;
-            address: string | null;
+            pickup_time: string;
+            pickup_location: {
+                id: number;
+                name: string;
+                address: string | null;
+            };
         };
         payments: Array<{
             id: number;
@@ -130,6 +135,7 @@ const isEditing = computed(() => !!props.existingPayment);
 </script>
 
 <template>
+
     <Head :title="isEditing ? 'Update Payment' : 'Complete Payment'" />
     <div class="px-4 py-6">
         <div class="mx-auto max-w-3xl">
@@ -157,19 +163,18 @@ const isEditing = computed(() => !!props.existingPayment);
                                 <div class="rounded-lg bg-muted/50 p-4">
                                     <div class="flex items-center gap-4">
                                         <div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-muted">
-                                            <img
-                                                v-if="booking.tour_date.package.image"
+                                            <img v-if="booking.tour_date.package.image"
                                                 :src="`/storage/${booking.tour_date.package.image}`"
                                                 :alt="booking.tour_date.package.package_name"
-                                                class="h-full w-full object-cover"
-                                            />
+                                                class="h-full w-full object-cover" />
                                             <div v-else class="flex h-full items-center justify-center">
                                                 <Package class="h-6 w-6 text-muted-foreground" />
                                             </div>
                                         </div>
                                         <div>
                                             <h3 class="font-semibold">{{ booking.tour_date.package.package_name }}</h3>
-                                            <div class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                            <div
+                                                class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                                                 <span class="flex items-center gap-1">
                                                     <Calendar class="h-3 w-3" />
                                                     {{ formatDate(booking.tour_date.tour_date) }}
@@ -180,6 +185,10 @@ const isEditing = computed(() => !!props.existingPayment);
                                                 </span>
                                             </div>
                                         </div>
+                                        <p class="flex items-center gap-1 text-xs text-muted-foreground">
+                                            <MapPin class="h-3 w-3" />
+                                            {{ booking.pickup_schedule?.pickup_location?.name || 'N/A' }}
+                                        </p>
                                     </div>
                                 </div>
 
@@ -187,16 +196,10 @@ const isEditing = computed(() => !!props.existingPayment);
                                 <div>
                                     <Label for="amount">Amount to Pay</Label>
                                     <div class="relative">
-                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₱</span>
-                                        <Input
-                                            id="amount"
-                                            v-model.number="form.amount"
-                                            type="number"
-                                            step="0.01"
-                                            min="0.01"
-                                            class="pl-8"
-                                            required
-                                        />
+                                        <span
+                                            class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₱</span>
+                                        <Input id="amount" v-model.number="form.amount" type="number" step="0.01"
+                                            min="0.01" class="pl-8" required />
                                     </div>
                                     <p v-if="form.errors.amount" class="mt-1 text-sm text-red-500">
                                         {{ form.errors.amount }}
@@ -211,11 +214,8 @@ const isEditing = computed(() => !!props.existingPayment);
                                             <SelectValue placeholder="Select payment method" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem
-                                                v-for="method in paymentMethods"
-                                                :key="method.value"
-                                                :value="method.value"
-                                            >
+                                            <SelectItem v-for="method in paymentMethods" :key="method.value"
+                                                :value="method.value">
                                                 {{ method.label }}
                                             </SelectItem>
                                         </SelectContent>
@@ -228,11 +228,8 @@ const isEditing = computed(() => !!props.existingPayment);
                                 <!-- Transaction Reference -->
                                 <div>
                                     <Label for="transaction_reference">Transaction Reference (Optional)</Label>
-                                    <Input
-                                        id="transaction_reference"
-                                        v-model="form.transaction_reference"
-                                        placeholder="e.g. GCash Ref #1234567890"
-                                    />
+                                    <Input id="transaction_reference" v-model="form.transaction_reference"
+                                        placeholder="e.g. GCash Ref #1234567890" />
                                     <p v-if="form.errors.transaction_reference" class="mt-1 text-sm text-red-500">
                                         {{ form.errors.transaction_reference }}
                                     </p>
@@ -242,19 +239,15 @@ const isEditing = computed(() => !!props.existingPayment);
                                 <div>
                                     <Label for="proof_of_payment">Proof of Payment (Optional)</Label>
                                     <div class="mt-1 flex items-center gap-4">
-                                        <Input
-                                            id="proof_of_payment"
-                                            type="file"
-                                            accept="image/*"
-                                            @change="handleFileChange"
-                                            class="flex-1"
-                                        />
+                                        <Input id="proof_of_payment" type="file" accept="image/*"
+                                            @change="handleFileChange" class="flex-1" />
                                     </div>
                                     <p class="mt-1 text-xs text-muted-foreground">
                                         Upload a screenshot or photo of your payment receipt.
                                     </p>
                                     <div v-if="proofPreview" class="mt-2">
-                                        <img :src="proofPreview" alt="Proof preview" class="h-32 w-32 rounded-md object-cover" />
+                                        <img :src="proofPreview" alt="Proof preview"
+                                            class="h-32 w-32 rounded-md object-cover" />
                                     </div>
                                     <p v-if="form.errors.proof_of_payment" class="mt-1 text-sm text-red-500">
                                         {{ form.errors.proof_of_payment }}
@@ -264,18 +257,15 @@ const isEditing = computed(() => !!props.existingPayment);
                                 <!-- Notes -->
                                 <div>
                                     <Label for="notes">Additional Notes (Optional)</Label>
-                                    <Textarea
-                                        id="notes"
-                                        v-model="form.notes"
-                                        rows="3"
-                                        placeholder="Any additional information about your payment..."
-                                    />
+                                    <Textarea id="notes" v-model="form.notes" rows="3"
+                                        placeholder="Any additional information about your payment..." />
                                     <p v-if="form.errors.notes" class="mt-1 text-sm text-red-500">
                                         {{ form.errors.notes }}
                                     </p>
                                 </div>
 
-                                <div class="flex items-center gap-2 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
+                                <div
+                                    class="flex items-center gap-2 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
                                     <AlertCircle class="h-4 w-4 flex-shrink-0" />
                                     <span>Your booking will be confirmed once your payment is verified.</span>
                                 </div>
@@ -317,9 +307,11 @@ const isEditing = computed(() => !!props.existingPayment);
                                 </div>
                                 <div class="flex justify-between pt-2 text-lg font-bold">
                                     <span>Total Amount</span>
-                                    <span class="text-primary">{{ formatPrice(booking.tour_date.package.price * booking.number_of_guests) }}</span>
+                                    <span class="text-primary">{{ formatPrice(booking.tour_date.package.price *
+                                        booking.number_of_guests) }}</span>
                                 </div>
-                                <div v-if="existingPayment" class="mt-2 rounded-lg bg-yellow-50 p-2 text-xs text-yellow-700">
+                                <div v-if="existingPayment"
+                                    class="mt-2 rounded-lg bg-yellow-50 p-2 text-xs text-yellow-700">
                                     <p>You have a pending payment for this booking.</p>
                                     <p>Update your payment details or submit a new one.</p>
                                 </div>

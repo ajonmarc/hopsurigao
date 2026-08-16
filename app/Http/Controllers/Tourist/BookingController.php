@@ -7,7 +7,7 @@ use App\Http\Requests\Tourist\StoreBookingRequest;
 use App\Http\Requests\Tourist\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Models\TourDate;
-use App\Models\PickupLocation;
+use App\Models\PickupSchedule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +21,28 @@ class BookingController extends Controller
     // the operator instead of being silently altered by the guest.
     private const EDITABLE_STATUSES = ['pending'];
 
+    /**
+     * Pickup schedule options for a single tour date, labeled with
+     * location name + time. Tourists only ever pick from schedules
+     * belonging to the specific tour date they're booking/editing.
+     */
+    private function pickupSchedulesForTourDate(int $tourDateId)
+    {
+        return PickupSchedule::with('pickupLocation:id,name,address')
+            ->where('tour_date_id', $tourDateId)
+            ->select('id', 'tour_date_id', 'pickup_location_id', 'pickup_time')
+            ->get()
+            ->map(function (PickupSchedule $schedule) {
+                return [
+                    'id' => $schedule->id,
+                    'tour_date_id' => $schedule->tour_date_id,
+                    'pickup_location_id' => $schedule->pickup_location_id,
+                    'label' => ($schedule->pickupLocation->name ?? 'Unknown location')
+                        . ' — ' . $schedule->pickup_time->format('h:i A'),
+                ];
+            });
+    }
+
     public function index(Request $request): Response
     {
         $perPage = (int) $request->input('per_page', 10);
@@ -30,8 +52,10 @@ class BookingController extends Controller
             ->bookings()
             ->with([
                 'tourDate.package:id,package_name,image,description,price',
-                'pickupLocation:id,name,address',
                 'tourDate:id,tour_date,package_id,capacity',
+                // CHANGED: pickup location now comes through the pickup schedule
+                'pickupSchedule:id,tour_date_id,pickup_location_id,pickup_time',
+                'pickupSchedule.pickupLocation:id,name,address',
                 'payments'
             ])
             ->when(
@@ -64,7 +88,8 @@ class BookingController extends Controller
     public function create(Request $request): mixed
     {
         $tourDateId = $request->input('tour_date_id');
-        $pickupLocationId = $request->input('pickup_location_id');
+        // CHANGED: was pickup_location_id, now pre-selecting a pickup schedule if provided
+        $pickupScheduleId = $request->input('pickup_schedule_id');
         $guests = (int) $request->input('guests', 1);
 
         if (!$tourDateId) {
@@ -97,9 +122,8 @@ class BookingController extends Controller
             return redirect()->route('tourist.packages.show', $tourDate->package_id);
         }
 
-        $pickupLocations = PickupLocation::where('status', 'active')
-            ->select('id', 'name', 'address')
-            ->get();
+        // CHANGED: pickup schedules scoped to this specific tour date
+        $pickupSchedules = $this->pickupSchedulesForTourDate((int) $tourDateId);
 
         return Inertia::render('tourist/bookings/Create', [
             'tourDate' => [
@@ -109,8 +133,8 @@ class BookingController extends Controller
                 'available_spots' => $availableSpots,
                 'capacity' => $tourDate->capacity,
             ],
-            'pickupLocations' => $pickupLocations,
-            'selectedPickupLocationId' => $pickupLocationId ? (int) $pickupLocationId : null,
+            'pickupSchedules' => $pickupSchedules,
+            'selectedPickupScheduleId' => $pickupScheduleId ? (int) $pickupScheduleId : null,
             'guests' => max(1, min($guests, $availableSpots)),
         ]);
     }
@@ -159,7 +183,9 @@ class BookingController extends Controller
         $booking->load([
             'tourDate.package:id,package_name,image,description,price',
             'tourDate:id,tour_date,package_id,capacity',
-            'pickupLocation:id,name,address',
+            // CHANGED
+            'pickupSchedule:id,tour_date_id,pickup_location_id,pickup_time',
+            'pickupSchedule.pickupLocation:id,name,address',
             'payments',
         ]);
 
@@ -190,7 +216,9 @@ class BookingController extends Controller
         $booking->load([
             'tourDate.package:id,package_name,image,description,price',
             'tourDate:id,tour_date,package_id,capacity',
-            'pickupLocation:id,name,address',
+            // CHANGED
+            'pickupSchedule:id,tour_date_id,pickup_location_id,pickup_time',
+            'pickupSchedule.pickupLocation:id,name,address',
         ]);
 
         // Spots available for THIS booking to grow into, i.e. capacity
@@ -202,13 +230,13 @@ class BookingController extends Controller
             ->sum('number_of_guests');
         $availableSpots = $booking->tourDate->capacity - $confirmedGuestsExcludingThis;
 
-        $pickupLocations = PickupLocation::where('status', 'active')
-            ->select('id', 'name', 'address')
-            ->get();
+        // CHANGED: pickup schedules scoped to this booking's tour date only
+        // (the tourist can't change tour_date_id here, so schedules can't cross tour dates)
+        $pickupSchedules = $this->pickupSchedulesForTourDate($booking->tour_date_id);
 
         return Inertia::render('tourist/bookings/Edit', [
             'booking' => $booking,
-            'pickupLocations' => $pickupLocations,
+            'pickupSchedules' => $pickupSchedules,
             'availableSpots' => $availableSpots,
         ]);
     }

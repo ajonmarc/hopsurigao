@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Models\TourDate;
 use App\Models\PickupLocation;
+use App\Models\PickupSchedule;
 use App\Models\Package;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,28 @@ use Illuminate\Http\JsonResponse;
 
 class BookingController extends Controller
 {
+    /**
+     * Build the "Pickup Schedule" options used by the booking Create/Edit forms.
+     * Each option represents one row in pickup_schedules, labeled with its
+     * location name + pickup time, and tagged with its tour_date_id so the
+     * frontend can filter options down to the currently selected tour date.
+     */
+    private function pickupScheduleOptions()
+    {
+        return PickupSchedule::with('pickupLocation:id,name,address')
+            ->select('id', 'tour_date_id', 'pickup_location_id', 'pickup_time')
+            ->get()
+            ->map(function (PickupSchedule $schedule) {
+                return [
+                    'id' => $schedule->id,
+                    'tour_date_id' => $schedule->tour_date_id,
+                    'pickup_location_id' => $schedule->pickup_location_id,
+                    'label' => ($schedule->pickupLocation->name ?? 'Unknown location')
+                        . ' — ' . $schedule->pickup_time->format('h:i A'),
+                ];
+            });
+    }
+
     public function index(Request $request): Response
     {
         $perPage = (int) $request->input('per_page', 10);
@@ -28,8 +51,8 @@ class BookingController extends Controller
             ->with([
                 'user:id,name,email',
                 'tourDate.package:id,package_name,price,description,image,destination,status',
-                'pickupLocation:id,name,address',
-                // NEW: needed so the admin table/columns can read payment_status
+                'pickupSchedule:id,tour_date_id,pickup_location_id,pickup_time',
+                'pickupSchedule.pickupLocation:id,name,address',
                 'payments',
             ])
             ->when(
@@ -122,6 +145,9 @@ class BookingController extends Controller
             ->orderBy('name')
             ->get();
 
+        // NEW: needed by the inline Edit dialog's BookingForm on this page
+        $pickupSchedules = $this->pickupScheduleOptions();
+
         $users = User::select('id', 'name', 'email')
             ->orderBy('name')
             ->get();
@@ -130,7 +156,8 @@ class BookingController extends Controller
             'bookings' => $bookings,
             'packages' => $packages,
             'tourDates' => $tourDates,
-            'pickupLocations' => $pickupLocations,
+            'pickupLocations' => $pickupLocations, // kept, e.g. if you add a filter dropdown later
+            'pickupSchedules' => $pickupSchedules, // NEW — this is what was missing
             'users' => $users,
             'filters' => $request->only(
                 'sort',
@@ -158,10 +185,8 @@ class BookingController extends Controller
                 ];
             });
 
-        $pickupLocations = PickupLocation::select('id', 'name', 'address')
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get();
+        // CHANGED: form now picks a pickup SCHEDULE (location + time), not just a location
+        $pickupSchedules = $this->pickupScheduleOptions();
 
         $users = User::select('id', 'name', 'email')
             ->orderBy('name')
@@ -169,7 +194,7 @@ class BookingController extends Controller
 
         return Inertia::render('admin/bookings/Create', [
             'tourDates' => $tourDates,
-            'pickupLocations' => $pickupLocations,
+            'pickupSchedules' => $pickupSchedules,
             'users' => $users,
             'selectedTourDateId' => $request->input('tour_date_id'),
         ]);
@@ -191,8 +216,9 @@ class BookingController extends Controller
         $booking->load([
             'user:id,name,email',
             'tourDate.package:id,package_name,price,description,image,destination,status',
-            'pickupLocation:id,name,address',
-            'payments', // NEW
+            'pickupSchedule:id,tour_date_id,pickup_location_id,pickup_time',
+            'pickupSchedule.pickupLocation:id,name,address',
+            'payments',
         ]);
 
         $tourDates = TourDate::with('package:id,package_name')
@@ -206,10 +232,7 @@ class BookingController extends Controller
                 ];
             });
 
-        $pickupLocations = PickupLocation::select('id', 'name', 'address')
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get();
+        $pickupSchedules = $this->pickupScheduleOptions();
 
         $users = User::select('id', 'name', 'email')
             ->orderBy('name')
@@ -218,7 +241,7 @@ class BookingController extends Controller
         return Inertia::render('admin/bookings/Edit', [
             'booking' => $booking,
             'tourDates' => $tourDates,
-            'pickupLocations' => $pickupLocations,
+            'pickupSchedules' => $pickupSchedules,
             'users' => $users,
         ]);
     }
@@ -260,7 +283,7 @@ class BookingController extends Controller
     }
 
     /**
-     * NEW: Admin confirms a booking's payment.
+     * Admin confirms a booking's payment.
      * Marks the latest payment record as 'paid', stamps paid_at,
      * and bumps the booking to 'confirmed' if it was still 'pending'.
      */
@@ -292,7 +315,6 @@ class BookingController extends Controller
         return redirect()->back();
     }
 
-
     public function updateStatus(Request $request, Booking $booking): RedirectResponse
     {
         $data = $request->validate([
@@ -306,8 +328,6 @@ class BookingController extends Controller
         return redirect()->back();
     }
 
-
-
     public function verifyQr(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -320,7 +340,9 @@ class BookingController extends Controller
                 'user:id,name,email',
                 'tourDate:id,tour_date,package_id',
                 'tourDate.package:id,package_name',
-                'pickupLocation:id,name',
+                // CHANGED: pickup location comes through the pickup schedule now
+                'pickupSchedule:id,pickup_location_id,pickup_time',
+                'pickupSchedule.pickupLocation:id,name',
             ])
             ->first();
 
@@ -349,7 +371,13 @@ class BookingController extends Controller
                 'guest_email' => $booking->user->email ?? null,
                 'package_name' => $booking->tourDate->package->package_name ?? 'N/A',
                 'tour_date' => optional($booking->tourDate->tour_date)->format('F j, Y'),
-                'pickup_location' => $booking->pickupLocation->name ?? 'N/A',
+                'pickup_location' => $booking->pickupSchedule->pickupLocation->name ?? 'N/A',
+                // Explicitly format to H:i here — pulling the raw Carbon
+                // attribute into a bare array and JSON-encoding it bypasses
+                // the model's 'datetime:H:i' cast format and serializes via
+                // Carbon's own UTC-based jsonSerialize(), which was shifting
+                // the hour on the frontend (11:00 AM showing as 10:00 AM).
+                'pickup_time' => optional($booking->pickupSchedule->pickup_time)->format('H:i'),
                 'number_of_guests' => $booking->number_of_guests,
                 'booking_status' => $booking->booking_status,
             ],

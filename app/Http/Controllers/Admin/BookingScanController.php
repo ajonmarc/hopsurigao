@@ -36,7 +36,9 @@ class BookingScanController extends Controller
                 'user:id,name,email',
                 'tourDate:id,tour_date,package_id',
                 'tourDate.package:id,package_name',
-                'pickupLocation:id,name',
+                // Load the booking's direct pickup schedule
+                'pickupSchedule:id,pickup_time,pickup_location_id',
+                'pickupSchedule.pickupLocation:id,name',
             ])
             ->first();
 
@@ -56,6 +58,24 @@ class BookingScanController extends Controller
             ]);
         }
 
+        // Get the pickup schedule from the booking's direct relation
+        $pickupSchedule = $booking->pickupSchedule;
+        
+        // Get the pickup time as a plain string without timezone conversion
+        $pickupTime = null;
+        if ($pickupSchedule) {
+            // Access the raw attribute directly to avoid the cast
+            $pickupTime = $pickupSchedule->getRawOriginal('pickup_time');
+            
+            // If that doesn't work, try getting it as a string
+            if (!$pickupTime) {
+                $pickupTime = $pickupSchedule->pickup_time;
+                if ($pickupTime instanceof \DateTimeInterface) {
+                    $pickupTime = $pickupTime->format('H:i');
+                }
+            }
+        }
+
         return response()->json([
             'found' => true,
             'valid' => true,
@@ -65,7 +85,9 @@ class BookingScanController extends Controller
                 'guest_email' => $booking->user->email ?? null,
                 'package_name' => $booking->tourDate->package->package_name ?? 'N/A',
                 'tour_date' => optional($booking->tourDate->tour_date)->format('F j, Y'),
-                'pickup_location' => $booking->pickupLocation->name ?? 'N/A',
+                'pickup_location' => $pickupSchedule?->pickupLocation?->name ?? 'N/A',
+                // Use the raw time string without timezone conversion
+                'pickup_time' => $pickupTime,
                 'number_of_guests' => $booking->number_of_guests,
                 'booking_status' => $booking->booking_status,
             ],

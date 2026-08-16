@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\PickupLocationController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\BookingScanController;
+use App\Http\Controllers\Admin\PickupScheduleController;
 
 
 use Illuminate\Support\Facades\Route;
@@ -56,6 +57,10 @@ Route::middleware('role:Admin,Operator')->prefix('admin')->name('admin.')->group
         ->name('notifications.bookings');
 
 
-  Route::get('bookings-scan', [BookingScanController::class, 'index'])->name('bookings-scan.index');
-Route::post('bookings-scan/verify', [BookingScanController::class, 'verify'])->name('bookings-scan.verify');
+    Route::get('bookings-scan', [BookingScanController::class, 'index'])->name('bookings-scan.index');
+    Route::post('bookings-scan/verify', [BookingScanController::class, 'verify'])->name('bookings-scan.verify');
+
+    Route::resource('pickup-schedules', PickupScheduleController::class);
+    Route::delete('pickup-schedules-bulk-destroy', [PickupScheduleController::class, 'bulkDestroy'])
+        ->name('pickup-schedules.bulk.destroy');
 });

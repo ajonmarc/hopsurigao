@@ -13,7 +13,7 @@ class DashboardController extends Controller
     public function index(): Response
     {
         $user = Auth::user();
-        
+
         $stats = [
             'total_bookings' => $user->bookings()->count(),
             'upcoming_bookings' => $user->bookings()
@@ -32,7 +32,9 @@ class DashboardController extends Controller
                 ->with([
                     'tourDate.package:id,package_name,image,description',
                     'tourDate:id,tour_date,package_id',
-                    'pickupLocation:id,name'
+                    // CHANGED: pickup location now comes through the pickup schedule
+                    'pickupSchedule:id,tour_date_id,pickup_location_id,pickup_time',
+                    'pickupSchedule.pickupLocation:id,name',
                 ])
                 ->latest()
                 ->limit(5)
@@ -45,7 +47,8 @@ class DashboardController extends Controller
                         'tour_date' => $booking->tourDate->tour_date,
                         'booking_status' => $booking->booking_status,
                         'number_of_guests' => $booking->number_of_guests,
-                        'pickup_location' => $booking->pickupLocation?->name,
+                        // CHANGED: pulled through pickupSchedule instead of a direct pickupLocation relation
+                        'pickup_location' => $booking->pickupSchedule?->pickupLocation?->name,
                         'created_at' => $booking->created_at,
                     ];
                 }),

@@ -31,9 +31,13 @@ const props = defineProps<{
                     image: string | null;
                 };
             };
-            pickup_location: {
-                name: string;
-                address: string | null;
+            // CHANGED: pickup_location -> pickup_schedule
+            pickup_schedule: {
+                pickup_time: string;
+                pickup_location: {
+                    name: string;
+                    address: string | null;
+                };
             };
         };
     };
@@ -93,6 +97,7 @@ const getPaymentMethodLabel = (method: string) => {
 </script>
 
 <template>
+
     <Head title="Payment Details" />
     <div class="px-4 py-6">
         <div class="mx-auto max-w-3xl">
@@ -173,7 +178,8 @@ const getPaymentMethodLabel = (method: string) => {
                     <CardContent class="space-y-3">
                         <div class="flex justify-between border-b pb-2">
                             <span class="text-muted-foreground">Booking ID</span>
-                            <Link :href="`/tourist/bookings/${payment.booking.id}`" class="text-blue-600 hover:underline">
+                            <Link :href="`/tourist/bookings/${payment.booking.id}`"
+                                class="text-blue-600 hover:underline">
                                 #{{ payment.booking.id }}
                             </Link>
                         </div>
@@ -191,7 +197,7 @@ const getPaymentMethodLabel = (method: string) => {
                         </div>
                         <div class="flex justify-between pb-2">
                             <span class="text-muted-foreground">Pickup Location</span>
-                            <span>{{ payment.booking.pickup_location.name }}</span>
+                            <span>{{ payment.booking.pickup_schedule?.pickup_location?.name || 'N/A' }}</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -203,11 +209,8 @@ const getPaymentMethodLabel = (method: string) => {
                     <CardTitle>Proof of Payment</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <a 
-                        :href="`/storage/${payment.proof_of_payment}`" 
-                        target="_blank"
-                        class="text-blue-600 hover:underline"
-                    >
+                    <a :href="`/storage/${payment.proof_of_payment}`" target="_blank"
+                        class="text-blue-600 hover:underline">
                         View Proof of Payment
                     </a>
                 </CardContent>

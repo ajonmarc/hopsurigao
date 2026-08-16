@@ -16,14 +16,14 @@ return new class extends Migration
                   ->constrained()
                   ->cascadeOnDelete();
 
-            // Specific package schedule/date
+            // Specific tour date
             $table->foreignId('tour_date_id')
                   ->constrained('tour_dates')
                   ->restrictOnDelete();
 
-            // Selected pickup location
-            $table->foreignId('pickup_location_id')
-                  ->constrained('pickup_locations')
+            // Exact pickup schedule selected for this booking
+            $table->foreignId('pickup_schedule_id')
+                  ->constrained('pickup_schedules')
                   ->restrictOnDelete();
 
             // Total number of travelers, including lead traveler
@@ -45,8 +45,7 @@ return new class extends Migration
                 'completed',
             ])->default('pending');
 
-            // Unique token used to identify and verify this booking's QR code
-            $table->string('qr_token')->unique()->nullable();
+
 
             $table->timestamps();
         });

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Tourist;
 
 use App\Http\Controllers\Controller;
 use App\Models\Package;
-use App\Models\PickupLocation;
+use App\Models\PickupSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder;
 use Inertia\Inertia;
@@ -55,7 +55,7 @@ class PackageController extends Controller
                 function (Builder $query, string $sort) {
                     $direction = str_starts_with($sort, '-') ? 'desc' : 'asc';
                     $column = ltrim($sort, '-');
-                    
+
                     if (in_array($column, ['package_name', 'price', 'destination'])) {
                         $query->orderBy($column, $direction);
                     }
@@ -102,16 +102,29 @@ class PackageController extends Controller
             },
         ]);
 
-        // Get available pickup locations
-        $pickupLocations = PickupLocation::where('status', 'active')
-            ->select('id', 'name', 'address')
-            ->get();
+        // CHANGED: pickup schedules for all upcoming tour dates of this package,
+        // so the frontend can filter them down once a tour date is picked.
+        $tourDateIds = $package->tourDates->pluck('id');
+
+        $pickupSchedules = PickupSchedule::with('pickupLocation:id,name,address')
+            ->whereIn('tour_date_id', $tourDateIds)
+            ->select('id', 'tour_date_id', 'pickup_location_id', 'pickup_time')
+            ->get()
+            ->map(function (PickupSchedule $schedule) {
+                return [
+                    'id' => $schedule->id,
+                    'tour_date_id' => $schedule->tour_date_id,
+                    'pickup_location_id' => $schedule->pickup_location_id,
+                    'label' => ($schedule->pickupLocation->name ?? 'Unknown location')
+                        . ' — ' . $schedule->pickup_time->format('h:i A'),
+                ];
+            });
 
         // Calculate available spots for each tour date
         $tourDates = $package->tourDates->map(function ($tourDate) {
             $confirmedBookings = $tourDate->bookings_count ?? 0;
             $availableSpots = max(0, $tourDate->capacity - $confirmedBookings);
-            
+
             return [
                 'id' => $tourDate->id,
                 'tour_date' => $tourDate->tour_date,
@@ -131,7 +144,7 @@ class PackageController extends Controller
         return Inertia::render('tourist/packages/Show', [
             'package' => $package,
             'tourDates' => $tourDates,
-            'pickupLocations' => $pickupLocations,
+            'pickupSchedules' => $pickupSchedules, // CHANGED from pickupLocations
             'tourTimes' => $tourTimes,
         ]);
     }

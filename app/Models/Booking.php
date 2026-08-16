@@ -12,7 +12,7 @@ class Booking extends Model
     protected $fillable = [
         'user_id',
         'tour_date_id',
-        'pickup_location_id',
+        'pickup_schedule_id',
         'number_of_guests',
         'phone_number',
         'nationality',
@@ -24,10 +24,8 @@ class Booking extends Model
     protected static function booted(): void
     {
         static::creating(function (Booking $booking) {
-            // Every booking gets a unique, unguessable token used to
-            // generate its QR code. Generated here (not in the
-            // controller) so it's set no matter which controller or
-            // seeder creates the booking.
+            // Every booking gets a unique, unguessable token
+            // used to generate its QR code.
             if (empty($booking->qr_token)) {
                 $booking->qr_token = (string) Str::uuid();
             }
@@ -44,9 +42,9 @@ class Booking extends Model
         return $this->belongsTo(TourDate::class);
     }
 
-    public function pickupLocation(): BelongsTo
+    public function pickupSchedule(): BelongsTo
     {
-        return $this->belongsTo(PickupLocation::class);
+        return $this->belongsTo(PickupSchedule::class);
     }
 
     public function payments(): HasMany

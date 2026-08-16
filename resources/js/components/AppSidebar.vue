@@ -56,6 +56,11 @@ const adminNavItems: NavItem[] = [
         ],
     },
     { title: 'Pickup Locations', href: '/admin/pickup-locations', icon: MapPin },
+    {
+        title: 'Pickup Schedules',
+        href: '/admin/pickup-schedules',
+        icon: CalendarClock
+    },
     { title: 'Bookings', href: '/admin/bookings', icon: ClipboardCheck },
     { title: 'Reminders', href: '/admin/reminders', icon: Bell },
     { title: 'QR Codes', href: '/admin/bookings-scan', icon: QrCode },

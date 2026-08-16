@@ -36,7 +36,8 @@ const props = defineProps<{
     };
     packages: { id: number; package_name: string }[];
     tourDates: { id: number; label: string }[];
-    pickupLocations: { id: number; name: string; address: string | null }[];
+    // CHANGED: was pickupLocations
+    pickupSchedules: { id: number; tour_date_id: number; pickup_location_id: number; label: string }[];
     users: { id: number; name: string; email: string }[];
     filters?: {
         sort?: string;
@@ -98,7 +99,7 @@ const editingBookingFormValues = computed(() => {
         id: editingBooking.value.id,
         user_id: editingBooking.value.user_id,
         tour_date_id: editingBooking.value.tour_date_id,
-        pickup_location_id: editingBooking.value.pickup_location_id,
+        pickup_schedule_id: editingBooking.value.pickup_schedule_id, // <-- must be this, not pickup_location_id
         number_of_guests: editingBooking.value.number_of_guests,
         phone_number: editingBooking.value.phone_number,
         nationality: editingBooking.value.nationality,
@@ -446,7 +447,7 @@ const onDateFilterChange = (key: string, value: string) => {
             @update:open="(v) => !v && (editingBooking = null)">
             <template #default="{ close }">
                 <BookingForm v-if="editingBookingFormValues" :booking="editingBookingFormValues" :tour-dates="tourDates"
-                    :pickup-locations="pickupLocations" :users="users" :submit-action="update(editingBooking!.id)"
+                    :pickup-schedules="pickupSchedules" :users="users" :submit-action="update(editingBooking!.id)"
                     submit-label="Save Changes" :on-cancel="close" @success="editingBooking = null" />
             </template>
         </FormDialog>
@@ -457,29 +458,17 @@ const onDateFilterChange = (key: string, value: string) => {
             " @update:open="(v) => !v && (deletingBooking = null)" />
 
         <!-- Confirm Payment Dialog -->
-        <ConfirmActionDialog
-            :open="!!confirmingPaymentBooking"
-            :action="confirmPaymentAction"
-            title="Confirm Payment?"
-            confirm-label="Confirm Payment"
-            confirm-class="bg-green-600 hover:bg-green-700 text-white"
-            :description="confirmingPaymentBooking
+        <ConfirmActionDialog :open="!!confirmingPaymentBooking" :action="confirmPaymentAction" title="Confirm Payment?"
+            confirm-label="Confirm Payment" confirm-class="bg-green-600 hover:bg-green-700 text-white" :description="confirmingPaymentBooking
                 ? `This will mark the payment for ${confirmingPaymentBooking.user?.name}'s booking as paid and confirm the booking.`
                 : ''
-            "
-            @update:open="(v) => !v && (confirmingPaymentBooking = null)"
-            @confirmed="handleConfirmPaymentSuccess"
-        />
+                " @update:open="(v) => !v && (confirmingPaymentBooking = null)" @confirmed="handleConfirmPaymentSuccess" />
 
         <!-- Change Status Dialog -->
-        <ChangeStatusDialog
-            :open="!!changingStatusBooking"
-            :booking-id="changingStatusBooking?.id ?? null"
+        <ChangeStatusDialog :open="!!changingStatusBooking" :booking-id="changingStatusBooking?.id ?? null"
             :current-status="changingStatusBooking?.booking_status ?? null"
             :guest-name="changingStatusBooking?.user?.name ?? null"
-            @update:open="(v) => !v && (changingStatusBooking = null)"
-            @updated="handleStatusUpdateSuccess"
-        />
+            @update:open="(v) => !v && (changingStatusBooking = null)" @updated="handleStatusUpdateSuccess" />
 
         <BulkDeleteDialog :open="bulkDeleteOpen" :count="selectedCount" :ids="selectedIds" item-label="booking"
             action="/admin/bookings-bulk-destroy" @update:open="bulkDeleteOpen = $event"

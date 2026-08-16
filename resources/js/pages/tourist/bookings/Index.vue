@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { 
-    CalendarClock, 
-    MapPin, 
-    Users, 
-    Package, 
-    Clock, 
-    CheckCircle, 
+import {
+    CalendarClock,
+    MapPin,
+    Users,
+    Package,
+    Clock,
+    CheckCircle,
     XCircle,
     Phone,
     Globe,
@@ -19,7 +19,8 @@ import {
     X,
     Eye,
     CreditCard,
-    QrCode
+    QrCode,
+    Wallet
 } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +50,7 @@ const props = defineProps<{
             id: number;
             user_id: number;
             tour_date_id: number;
-            pickup_location_id: number;
+            pickup_schedule_id: number;
             number_of_guests: number;
             phone_number: string;
             nationality: string;
@@ -69,10 +70,14 @@ const props = defineProps<{
                     price: number | null;
                 };
             };
-            pickup_location: {
+            pickup_schedule: {
                 id: number;
-                name: string;
-                address: string | null;
+                pickup_time: string;
+                pickup_location: {
+                    id: number;
+                    name: string;
+                    address: string | null;
+                };
             };
             payments: Array<{
                 id: number;
@@ -107,6 +112,10 @@ const showQrDialog = ref(false);
 const qrBookingToken = ref<string | null>(null);
 const qrBookingId = ref<number | null>(null);
 const qrDisplayRef = ref<InstanceType<typeof QrCodeDisplay> | null>(null);
+
+// Tracks which booking's "Pay Now" was just clicked, so only that
+// button shows a loading state instead of the whole page.
+const payingBookingId = ref<number | null>(null);
 
 const getStatusColor = (status: string) => {
     const colors = {
@@ -177,6 +186,19 @@ const formatPrice = (price: number | null) => {
     }).format(price);
 };
 
+
+const formatTime = (timeString: string | undefined | null) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+    });
+};
+
 const canCancel = (status: string) => {
     return ['pending', 'confirmed'].includes(status);
 };
@@ -195,6 +217,19 @@ const canEdit = (status: string) => {
 // checking someone in for — a cancelled booking shouldn't be scannable.
 const canShowQr = (status: string) => {
     return ['pending', 'confirmed', 'completed'].includes(status);
+};
+
+// Payment only makes sense while the booking is still active and there's
+// no successful payment on it yet (no payment record, or the last
+// attempt failed). Cancelled bookings shouldn't be payable.
+const canPay = (booking: typeof props.bookings.data[0]) => {
+    if (!['pending', 'confirmed'].includes(booking.booking_status)) {
+        return false;
+    }
+    if (!booking.payments || booking.payments.length === 0) {
+        return true;
+    }
+    return booking.payments[0].payment_status === 'failed';
 };
 
 const openCancelDialog = (booking: typeof props.bookings.data[0]) => {
@@ -218,6 +253,22 @@ const openQrDialog = (booking: typeof props.bookings.data[0]) => {
 
 const downloadQr = () => {
     qrDisplayRef.value?.download();
+};
+
+// Sends the tourist to the payment creation page, passing the booking
+// id as a query param so PaymentController@create can look it up and
+// pre-fill the amount/booking details.
+const payNow = (booking: typeof props.bookings.data[0]) => {
+    if (payingBookingId.value) return;
+    payingBookingId.value = booking.id;
+
+    router.get(tourist.payments.create().url, {
+        booking_id: booking.id,
+    }, {
+        onFinish: () => {
+            payingBookingId.value = null;
+        },
+    });
 };
 
 const handleCancelSuccess = () => {
@@ -255,6 +306,7 @@ const onFilterChange = () => {
 </script>
 
 <template>
+
     <Head title="My Bookings" />
     <div class="px-4 py-6">
         <Heading title="My Bookings" description="View and manage your tour bookings" />
@@ -301,21 +353,16 @@ const onFilterChange = () => {
                     <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                         <div class="flex min-w-0 items-center gap-4">
                             <div class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-muted">
-                                <img 
-                                    v-if="booking.tour_date.package.image"
+                                <img v-if="booking.tour_date.package.image"
                                     :src="`/storage/${booking.tour_date.package.image}`"
-                                    :alt="booking.tour_date.package.package_name"
-                                    class="h-full w-full object-cover"
-                                />
+                                    :alt="booking.tour_date.package.package_name" class="h-full w-full object-cover" />
                                 <div v-else class="flex h-full items-center justify-center">
                                     <Package class="h-6 w-6 text-muted-foreground" />
                                 </div>
                             </div>
                             <div class="min-w-0">
-                                <Link 
-                                    :href="`/tourist/packages/${booking.tour_date.package.id}`"
-                                    class="text-lg font-semibold hover:underline"
-                                >
+                                <Link :href="`/tourist/packages/${booking.tour_date.package.id}`"
+                                    class="text-lg font-semibold hover:underline">
                                     {{ booking.tour_date.package.package_name }}
                                 </Link>
                                 <p class="text-sm text-muted-foreground line-clamp-1">
@@ -329,37 +376,20 @@ const onFilterChange = () => {
                                 {{ getStatusLabel(booking.booking_status) }}
                             </Badge>
                             <div class="flex flex-wrap gap-2">
-                                <Button
-                                    v-if="canShowQr(booking.booking_status) && booking.qr_token"
-                                    variant="secondary"
-                                    size="sm"
-                                    @click="openQrDialog(booking)"
-                                >
+                                <Button v-if="canShowQr(booking.booking_status) && booking.qr_token" variant="secondary"
+                                    size="sm" @click="openQrDialog(booking)">
                                     <QrCode class="mr-1.5 h-4 w-4 shrink-0" />
                                     <span>QR Code</span>
                                 </Button>
-                                <Button
-                                    v-if="canEdit(booking.booking_status)"
-                                    as-child
-                                    variant="outline"
-                                    size="sm"
-                                >
+                                <Button v-if="canEdit(booking.booking_status)" as-child variant="outline" size="sm">
                                     <Link :href="`/tourist/bookings/${booking.id}/edit`">Edit</Link>
                                 </Button>
-                                <Button 
-                                    v-if="canCancel(booking.booking_status)" 
-                                    variant="destructive" 
-                                    size="sm"
-                                    @click="openCancelDialog(booking)"
-                                >
+                                <Button v-if="canCancel(booking.booking_status)" variant="destructive" size="sm"
+                                    @click="openCancelDialog(booking)">
                                     Cancel
                                 </Button>
-                                <Button 
-                                    v-if="canDelete(booking.booking_status)" 
-                                    variant="outline" 
-                                    size="sm"
-                                    @click="openDeleteDialog(booking)"
-                                >
+                                <Button v-if="canDelete(booking.booking_status)" variant="outline" size="sm"
+                                    @click="openDeleteDialog(booking)">
                                     Delete
                                 </Button>
                             </div>
@@ -385,10 +415,16 @@ const onFilterChange = () => {
                             </p>
                         </div>
                         <div class="min-w-0">
-                            <p class="text-xs font-medium text-muted-foreground">Pickup Location</p>
+                            <p class="text-xs font-medium text-muted-foreground">Pickup</p>
                             <p class="flex items-center gap-1 text-sm">
                                 <MapPin class="h-3 w-3 shrink-0 text-muted-foreground" />
-                                <span class="truncate">{{ booking.pickup_location?.name || 'N/A' }}</span>
+                                <span class="truncate">{{ booking.pickup_schedule?.pickup_location?.name || 'N/A'
+                                    }}</span>
+                            </p>
+                            <p v-if="booking.pickup_schedule?.pickup_time"
+                                class="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock class="h-3 w-3 shrink-0" />
+                                <span >{{ formatTime(booking.pickup_schedule.pickup_time) }}</span>
                             </p>
                         </div>
                         <div class="min-w-0">
@@ -429,26 +465,35 @@ const onFilterChange = () => {
 
                     <!-- Payment Status -->
                     <div class="mt-4 border-t pt-4">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-3">
                             <span class="flex items-center gap-2 text-sm font-medium">
                                 <CreditCard class="h-4 w-4" />
                                 Payment Status
                             </span>
-                            <div v-if="booking.payments && booking.payments.length > 0">
-                                <Badge :class="getPaymentStatusColor(booking.payments[0].payment_status)">
-                                    {{ getPaymentStatusLabel(booking.payments[0].payment_status) }}
-                                </Badge>
-                            </div>
-                            <div v-else>
-                                <Badge class="bg-gray-100 text-gray-600">
-                                    No Payment
-                                </Badge>
+                            <div class="flex items-center gap-2">
+                                <div v-if="booking.payments && booking.payments.length > 0">
+                                    <Badge :class="getPaymentStatusColor(booking.payments[0].payment_status)">
+                                        {{ getPaymentStatusLabel(booking.payments[0].payment_status) }}
+                                    </Badge>
+                                </div>
+                                <div v-else>
+                                    <Badge class="bg-gray-100 text-gray-600">
+                                        No Payment
+                                    </Badge>
+                                </div>
+                                <Button v-if="canPay(booking)" variant="default" size="sm"
+                                    :disabled="payingBookingId === booking.id" @click="payNow(booking)">
+                                    <Wallet class="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                                    <span>{{ payingBookingId === booking.id ? 'Redirecting...' : 'Pay Now' }}</span>
+                                </Button>
                             </div>
                         </div>
-                        <div v-if="booking.payments && booking.payments.length > 0" class="mt-2 text-sm text-muted-foreground">
+                        <div v-if="booking.payments && booking.payments.length > 0"
+                            class="mt-2 text-sm text-muted-foreground">
                             <span>Amount: {{ formatPrice(booking.payments[0].amount) }}</span>
                             <span class="mx-2">|</span>
-                            <span>Method: {{ booking.payments[0].payment_method.toUpperCase().replace('_', ' ') }}</span>
+                            <span>Method: {{ booking.payments[0].payment_method.toUpperCase().replace('_', ' ')
+                            }}</span>
                         </div>
                     </div>
 
@@ -466,7 +511,8 @@ const onFilterChange = () => {
                         <div class="flex items-center justify-between">
                             <span class="text-sm font-medium">Total Amount</span>
                             <span class="text-lg font-bold text-primary">
-                                {{ formatPrice(booking.tour_date.package.price ? booking.tour_date.package.price * booking.number_of_guests : 0) }}
+                                {{ formatPrice(booking.tour_date.package.price ? booking.tour_date.package.price *
+                                    booking.number_of_guests : 0) }}
                             </span>
                         </div>
                     </div>
@@ -491,31 +537,24 @@ const onFilterChange = () => {
         </div>
 
         <!-- Cancel Confirmation Dialog -->
-        <DeleteDialog
-            :open="showCancelDialog"
-            :action="{
-                url: `/tourist/bookings/${selectedBookingId}/cancel`,
-                method: 'put'
-            }"
-            :description="`This will cancel your booking for ${selectedBookingName}. This action cannot be undone.`"
+        <DeleteDialog :open="showCancelDialog" :action="{
+            url: `/tourist/bookings/${selectedBookingId}/cancel`,
+            method: 'put'
+        }" :description="`This will cancel your booking for ${selectedBookingName}. This action cannot be undone.`"
             @update:open="(val) => { showCancelDialog = val; if (!val) { selectedBookingId = null; selectedBookingName = ''; } }"
-            @deleted="handleCancelSuccess"
-        />
+            @deleted="handleCancelSuccess" />
 
         <!-- Delete Confirmation Dialog -->
-        <DeleteDialog
-            :open="showDeleteDialog"
-            :action="{
-                url: `/tourist/bookings/${selectedBookingId}`,
-                method: 'delete'
-            }"
-            :description="`This will permanently delete your booking for ${selectedBookingName}. This action cannot be undone.`"
+        <DeleteDialog :open="showDeleteDialog" :action="{
+            url: `/tourist/bookings/${selectedBookingId}`,
+            method: 'delete'
+        }" :description="`This will permanently delete your booking for ${selectedBookingName}. This action cannot be undone.`"
             @update:open="(val) => { showDeleteDialog = val; if (!val) { selectedBookingId = null; selectedBookingName = ''; } }"
-            @deleted="handleDeleteSuccess"
-        />
+            @deleted="handleDeleteSuccess" />
 
         <!-- QR Code Dialog -->
-        <Dialog :open="showQrDialog" @update:open="(v) => { showQrDialog = v; if (!v) { qrBookingToken = null; qrBookingId = null; } }">
+        <Dialog :open="showQrDialog"
+            @update:open="(v) => { showQrDialog = v; if (!v) { qrBookingToken = null; qrBookingId = null; } }">
             <DialogContent class="sm:max-w-sm">
                 <DialogHeader>
                     <DialogTitle>Booking QR Code</DialogTitle>
@@ -525,12 +564,7 @@ const onFilterChange = () => {
                 </DialogHeader>
 
                 <div class="flex flex-col items-center gap-4 py-2">
-                    <QrCodeDisplay
-                        v-if="qrBookingToken"
-                        ref="qrDisplayRef"
-                        :value="qrBookingToken"
-                        :size="240"
-                    />
+                    <QrCodeDisplay v-if="qrBookingToken" ref="qrDisplayRef" :value="qrBookingToken" :size="240" />
                     <Button variant="outline" size="sm" class="w-full" @click="downloadQr">
                         Download QR Code
                     </Button>

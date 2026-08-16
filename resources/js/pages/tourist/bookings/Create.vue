@@ -31,19 +31,21 @@ const props = defineProps<{
         available_spots: number;
         capacity: number;
     };
-    pickupLocations: Array<{
+    // CHANGED: was pickupLocations
+    pickupSchedules: Array<{
         id: number;
-        name: string;
-        address: string | null;
+        tour_date_id: number;
+        pickup_location_id: number;
+        label: string;
     }>;
-    selectedPickupLocationId?: number | null;
+    selectedPickupScheduleId?: number | null;
     guests?: number;
 }>();
 
 // Pre-fill form with URL parameters
 const form = useForm({
     tour_date_id: props.tourDate.id,
-    pickup_location_id: props.selectedPickupLocationId ? String(props.selectedPickupLocationId) : '',
+    pickup_schedule_id: props.selectedPickupScheduleId ? String(props.selectedPickupScheduleId) : '',
     number_of_guests: props.guests || 1,
     phone_number: '',
     nationality: '',
@@ -136,28 +138,25 @@ const submitBooking = () => {
                                 </div>
                             </div>
 
-                            <!-- Pickup Location (pre-filled, editable) -->
+                            <!-- Pickup Schedule (CHANGED: was Pickup Location) -->
                             <div>
-                                <Label for="pickup_location_id">Pickup Location</Label>
-                                <Select v-model="form.pickup_location_id">
-                                    <SelectTrigger id="pickup_location_id">
-                                        <SelectValue placeholder="Select pickup location" />
+                                <Label for="pickup_schedule_id">Pickup Location & Time</Label>
+                                <Select v-model="form.pickup_schedule_id">
+                                    <SelectTrigger id="pickup_schedule_id">
+                                        <SelectValue placeholder="Select pickup location & time" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem
-                                            v-for="location in pickupLocations"
-                                            :key="location.id"
-                                            :value="String(location.id)"
+                                            v-for="schedule in pickupSchedules"
+                                            :key="schedule.id"
+                                            :value="String(schedule.id)"
                                         >
-                                            {{ location.name }}
-                                            <span v-if="location.address" class="ml-2 text-muted-foreground">
-                                                ({{ location.address }})
-                                            </span>
+                                            {{ schedule.label }}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <p v-if="form.errors.pickup_location_id" class="mt-1 text-sm text-red-500">
-                                    {{ form.errors.pickup_location_id }}
+                                <p v-if="form.errors.pickup_schedule_id" class="mt-1 text-sm text-red-500">
+                                    {{ form.errors.pickup_schedule_id }}
                                 </p>
                             </div>
 

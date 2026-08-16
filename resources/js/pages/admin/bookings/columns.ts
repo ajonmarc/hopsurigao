@@ -26,11 +26,18 @@ export type BookingRow = {
             status: string;
         };
     };
-    pickup_location_id: number;
-    pickup_location: {
+    // CHANGED: pickup now comes through pickup_schedule, not a direct pickup_location
+    pickup_schedule_id: number;
+    pickup_schedule: {
         id: number;
-        name: string;
-        address: string | null;
+        tour_date_id: number;
+        pickup_location_id: number;
+        pickup_time: string;
+        pickup_location: {
+            id: number;
+            name: string;
+            address: string | null;
+        };
     };
     number_of_guests: number;
     phone_number: string;
@@ -39,7 +46,6 @@ export type BookingRow = {
     booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
     created_at: string;
     updated_at: string;
-    // NEW: needed for the payment status column / confirm action
     payments?: Array<{
         id: number;
         amount: number;

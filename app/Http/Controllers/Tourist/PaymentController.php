@@ -23,7 +23,9 @@ class PaymentController extends Controller
 
         $booking = Booking::with([
             'tourDate.package:id,package_name,price,description,image',
-            'pickupLocation:id,name,address',
+            // CHANGED: pickup location now comes through the pickup schedule
+            'pickupSchedule:id,tour_date_id,pickup_location_id,pickup_time',
+            'pickupSchedule.pickupLocation:id,name,address',
             'payments'
         ])->findOrFail($bookingId);
 
@@ -115,7 +117,11 @@ class PaymentController extends Controller
 
     public function show(Payment $payment): Response
     {
-        $payment->load('booking.tourDate.package');
+        // CHANGED: pickup location now comes through the pickup schedule
+        $payment->load([
+            'booking.tourDate.package',
+            'booking.pickupSchedule.pickupLocation:id,name,address',
+        ]);
 
         // Ensure the payment belongs to the authenticated user
         if ($payment->booking->user_id !== Auth::id()) {

@@ -7,7 +7,7 @@ import Heading from '@/components/Heading.vue';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, RotateCcw, Camera } from '@lucide/vue';
+import { CheckCircle, XCircle, RotateCcw, Camera, Upload, ImageOff } from '@lucide/vue';
 
 defineOptions({
     layout: {
@@ -26,18 +26,25 @@ type VerifyResult = {
         package_name: string;
         tour_date: string | null;
         pickup_location: string;
+        pickup_time: string | null;
         number_of_guests: number;
         booking_status: string;
     };
 };
 
 const videoRef = ref<HTMLVideoElement | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 let scanner: QrScanner | null = null;
 
 const scanning = ref(true);
 const loading = ref(false);
 const result = ref<VerifyResult | null>(null);
 const cameraError = ref<string | null>(null);
+
+// NEW: separate error state for the upload path, so a bad image
+// doesn't get confused with a camera-access problem.
+const uploadError = ref<string | null>(null);
+const uploading = ref(false);
 
 const statusColors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-700',
@@ -46,13 +53,27 @@ const statusColors: Record<string, string> = {
     completed: 'bg-green-100 text-green-700',
 };
 
-const handleScan = async (qrToken: string) => {
-    if (!scanning.value || loading.value) return;
+const formatTime = (timeString: string | null | undefined) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+    });
+};
 
-    // Pause scanning while we verify, to avoid firing the same
-    // token repeatedly while it's still in the camera's view.
+const handleScan = async (qrToken: string) => {
+    if (loading.value) return;
+
+    // Pause live scanning while we verify, to avoid firing the same
+    // token repeatedly while it's still in the camera's view. Not
+    // relevant for uploads, but harmless to set either way.
     scanning.value = false;
     loading.value = true;
+    uploadError.value = null;
 
     try {
         const { data } = await axios.post<VerifyResult>('/admin/bookings-scan/verify', {
@@ -74,7 +95,38 @@ const handleScan = async (qrToken: string) => {
 const scanAgain = () => {
     result.value = null;
     cameraError.value = null;
+    uploadError.value = null;
     scanning.value = true;
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
+    }
+};
+
+// Opens the OS file/photo picker. Works whether or not the camera
+// stream is running — useful as the primary path on devices with no
+// camera, or as a fallback when getUserMedia fails.
+const triggerUpload = () => {
+    fileInputRef.value?.click();
+};
+
+const handleFileChange = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    uploadError.value = null;
+    uploading.value = true;
+
+    try {
+        const qrResult = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
+        await handleScan(qrResult.data);
+    } catch (err) {
+        console.error('[qr-scan] image decode failed', err);
+        uploadError.value = 'Could not find a QR code in that image. Try a clearer photo.';
+    } finally {
+        uploading.value = false;
+        input.value = ''; // allow re-selecting the same file
+    }
 };
 
 onMounted(async () => {
@@ -93,7 +145,7 @@ onMounted(async () => {
         await scanner.start();
     } catch (err) {
         console.error('[qr-scan] camera init failed', err);
-        cameraError.value = 'Could not access the camera. Check browser permissions and try again.';
+        cameraError.value = 'Could not access the camera. Check browser permissions and try again, or upload a QR code image instead.';
     }
 });
 
@@ -115,21 +167,49 @@ onUnmounted(() => {
                     <div class="relative aspect-square w-full overflow-hidden rounded-lg bg-black">
                         <video ref="videoRef" class="h-full w-full object-cover" />
 
-                        <div v-if="cameraError" class="absolute inset-0 flex items-center justify-center bg-black/80 p-4 text-center text-sm text-white">
-                            {{ cameraError }}
+                        <div v-if="cameraError" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 p-4 text-center text-sm text-white">
+                            <ImageOff class="h-8 w-8 text-white/70" />
+                            <p>{{ cameraError }}</p>
                         </div>
 
-                        <div v-if="!scanning && !cameraError" class="absolute inset-0 flex items-center justify-center bg-black/60">
+                        <div v-if="!scanning && !cameraError && !uploading" class="absolute inset-0 flex items-center justify-center bg-black/60">
                             <Button variant="secondary" @click="scanAgain">
                                 <RotateCcw class="mr-2 h-4 w-4" />
                                 Scan Next
                             </Button>
                         </div>
+
+                        <div v-if="uploading" class="absolute inset-0 flex items-center justify-center bg-black/60 text-sm text-white">
+                            Reading image...
+                        </div>
                     </div>
+
                     <p class="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Camera class="h-3.5 w-3.5" />
                         Point the camera at the guest's QR code.
                     </p>
+
+                    <!-- Upload fallback, always available regardless of camera state -->
+                    <div class="mt-3 border-t pt-3">
+                        <input
+                            ref="fileInputRef"
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            class="hidden"
+                            @change="handleFileChange"
+                        />
+                        <Button variant="outline" size="sm" class="w-full" :disabled="uploading" @click="triggerUpload">
+                            <Upload class="mr-2 h-4 w-4" />
+                            {{ uploading ? 'Reading...' : 'Upload QR Code Image' }}
+                        </Button>
+                        <p v-if="uploadError" class="mt-2 text-center text-xs text-red-500">
+                            {{ uploadError }}
+                        </p>
+                        <p v-else class="mt-2 text-center text-xs text-muted-foreground">
+                            Camera not working? Upload a photo or screenshot of the QR code instead.
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -177,7 +257,12 @@ onUnmounted(() => {
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-muted-foreground">Pickup</span>
-                                <span class="text-sm font-medium">{{ result.booking.pickup_location }}</span>
+                                <span class="text-sm font-medium">
+                                    {{ result.booking.pickup_location }}
+                                    <span v-if="result.booking.pickup_time" class="text-muted-foreground">
+                                        &middot; {{ formatTime(result.booking.pickup_time) }}
+                                    </span>
+                                </span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-muted-foreground">Guests</span>

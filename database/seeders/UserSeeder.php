@@ -16,7 +16,7 @@ class UserSeeder extends Seeder
         $touristRole = Role::where('name', 'Tourist')->first();
 
         User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Admin User',
                 'password' => Hash::make('password'),
@@ -26,7 +26,7 @@ class UserSeeder extends Seeder
         );
 
         User::firstOrCreate(
-            ['email' => 'operator@example.com'],
+            ['email' => 'operator@gmail.com'],
             [
                 'name' => 'Operator User',
                 'password' => Hash::make('password'),
@@ -35,27 +35,12 @@ class UserSeeder extends Seeder
         );
 
         User::firstOrCreate(
-            ['email' => 'tourist@example.com'],
+            ['email' => 'tourist@gmail.com'],
             [
                 'name' => 'Tourist User',
                 'password' => Hash::make('password'),
                 'role_id' => $touristRole?->id,
             ]
         );
-
-        // Generate 200 additional random users, split between Operator and Tourist roles
-        $randomRoleIds = collect([$operatorRole?->id, $touristRole?->id])
-            ->filter()
-            ->values();
-
-        User::factory()
-            ->count(200)
-            ->make() // build without saving so we can assign role_id per-user
-            ->each(function (User $user) use ($randomRoleIds) {
-                $user->role_id = $randomRoleIds->isNotEmpty()
-                    ? $randomRoleIds->random()
-                    : null;
-                $user->save();
-            });
     }
 }

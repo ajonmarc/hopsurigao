@@ -9,50 +9,45 @@ import {
     CardHeader,
 } from '@/components/ui/card';
 import Form from './Form.vue';
-import { index, store } from '@/routes/admin/bookings';
+import { index, store } from '@/routes/admin/pickup-schedules';
+
+defineProps<{
+    tourDates: { id: number; label: string }[];
+    pickupLocations: { id: number; name: string; address: string | null }[];
+}>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Bookings', href: index() },
+            { title: 'Pickup Schedules', href: index() },
             { title: 'Create' },
         ],
     },
 });
-
-defineProps<{
-    tourDates: { id: number; label: string }[];
-    // CHANGED: was pickupLocations
-    pickupSchedules: { id: number; tour_date_id: number; pickup_location_id: number; label: string }[];
-    users: { id: number; name: string; email: string }[];
-    selectedTourDateId?: string | number | null;
-}>();
 </script>
 
 <template>
-    <Head title="Create Booking" />
+    <Head title="Create Pickup Schedule" />
     <div class="px-4 py-6">
         <div class="mx-auto max-w-4xl">
             <Button as-child variant="ghost" size="sm" class="mb-4 -ml-2">
                 <Link :href="index()">
                     <ArrowLeft class="mr-2 h-4 w-4" />
-                    Back to Bookings
+                    Back to Pickup Schedules
                 </Link>
             </Button>
 
             <Card>
                 <CardHeader>
-                    <Heading title="Create Booking" description="Create a new tour booking for a guest" />
+                    <Heading title="Create Pickup Schedule" description="Assign a pickup time to a location for a tour date" />
                 </CardHeader>
                 <CardContent>
                     <Form
-                        :submit-action="store()"
                         :tour-dates="tourDates"
-                        :pickup-schedules="pickupSchedules"
-                        :users="users"
-                        :selected-tour-date-id="selectedTourDateId"
+                        :pickup-locations="pickupLocations"
+                        :submit-action="store()"
                         :cancel-href="index().url"
-                        submit-label="Create Booking"
+                        submit-label="Create Pickup Schedule"
                     />
                 </CardContent>
             </Card>

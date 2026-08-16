@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-    User, 
-    Mail, 
-    Package, 
-    Calendar, 
-    Users, 
-    MapPin, 
-    Phone, 
-    Globe, 
-    Clock, 
+import {
+    User,
+    Mail,
+    Package,
+    Calendar,
+    Users,
+    MapPin,
+    Phone,
+    Globe,
+    Clock,
     MessageSquare,
     DollarSign,
     Hash,
@@ -53,11 +53,18 @@ export interface BookingViewData {
             status: string;
         };
     };
-    pickup_location_id: number;
-    pickup_location: {
+    // CHANGED: pickup_location_id/pickup_location -> pickup_schedule
+    pickup_schedule_id: number;
+    pickup_schedule: {
         id: number;
-        name: string;
-        address: string | null;
+        tour_date_id: number;
+        pickup_location_id: number;
+        pickup_time: string;
+        pickup_location: {
+            id: number;
+            name: string;
+            address: string | null;
+        };
     };
     number_of_guests: number;
     phone_number: string;
@@ -151,6 +158,15 @@ const formatMethod = (method: string) => {
         .join(' ');
 };
 
+
+const formatPickupTime = (time?: string) => {
+    if (!time) return 'N/A';
+    // handles both "HH:mm:ss" and full ISO datetime strings
+    const d = time.includes('T') || time.includes(' ') ? new Date(time) : new Date(`1970-01-01T${time}`);
+    if (isNaN(d.getTime())) return time;
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+};
+
 // Latest payment first, so the most recent attempt/confirmation is on top.
 // Falls back to 0 (treated as oldest) if created_at isn't present.
 const sortedPayments = () => {
@@ -199,7 +215,8 @@ const totalPaid = () => {
                     <Package class="h-3.5 w-3.5" /> Package
                 </p>
                 <p class="text-sm font-semibold mt-1">{{ booking.tour_date?.package?.package_name || 'N/A' }}</p>
-                <p class="text-xs text-muted-foreground">Destination: {{ booking.tour_date?.package?.destination || 'N/A' }}</p>
+                <p class="text-xs text-muted-foreground">Destination: {{ booking.tour_date?.package?.destination ||
+                    'N/A' }}</p>
                 <p class="text-xs text-muted-foreground">Package ID: #{{ booking.tour_date?.package?.id }}</p>
                 <p class="text-xs text-muted-foreground">Status: {{ booking.tour_date?.package?.status || 'N/A' }}</p>
             </div>
@@ -221,16 +238,20 @@ const totalPaid = () => {
                 <p class="text-sm font-semibold mt-1">{{ booking.number_of_guests }} guests</p>
             </div>
 
-            <!-- Pickup Location -->
+            <!-- Pickup Schedule (CHANGED: was Pickup Location) -->
             <div class="rounded-lg border p-3">
                 <p class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <MapPin class="h-3.5 w-3.5" /> Pickup Location
+                    <MapPin class="h-3.5 w-3.5" /> Pickup
                 </p>
-                <p class="text-sm font-semibold mt-1">{{ booking.pickup_location?.name || 'N/A' }}</p>
-                <p v-if="booking.pickup_location?.address" class="text-xs text-muted-foreground truncate">
-                    {{ booking.pickup_location.address }}
+                <p class="text-sm font-semibold mt-1">{{ booking.pickup_schedule?.pickup_location?.name || 'N/A' }}</p>
+                <p v-if="booking.pickup_schedule?.pickup_location?.address"
+                    class="text-xs text-muted-foreground truncate">
+                    {{ booking.pickup_schedule.pickup_location.address }}
                 </p>
-                <p class="text-xs text-muted-foreground">Pickup ID: #{{ booking.pickup_location_id }}</p>
+                <p class="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Clock class="h-3 w-3" /> {{ formatPickupTime(booking.pickup_schedule?.pickup_time) }}
+                </p>
+                <p class="text-xs text-muted-foreground">Schedule ID: #{{ booking.pickup_schedule_id }}</p>
             </div>
 
             <!-- Phone -->
@@ -281,11 +302,8 @@ const totalPaid = () => {
             </div>
 
             <div v-if="booking.payments && booking.payments.length > 0" class="mt-2 space-y-2">
-                <div
-                    v-for="payment in sortedPayments()"
-                    :key="payment.id"
-                    class="flex flex-col gap-3 rounded-md border p-2.5 sm:flex-row sm:items-start sm:justify-between"
-                >
+                <div v-for="payment in sortedPayments()" :key="payment.id"
+                    class="flex flex-col gap-3 rounded-md border p-2.5 sm:flex-row sm:items-start sm:justify-between">
                     <div class="flex items-start gap-2">
                         <ReceiptText class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                         <div>
@@ -297,7 +315,8 @@ const totalPaid = () => {
                             </div>
                             <p class="text-xs text-muted-foreground">
                                 {{ formatMethod(payment.payment_method) }}
-                                <span v-if="payment.reference_number"> &middot; Ref: {{ payment.reference_number }}</span>
+                                <span v-if="payment.reference_number"> &middot; Ref: {{ payment.reference_number
+                                    }}</span>
                             </p>
                             <div class="text-left text-xs text-muted-foreground mt-1 sm:hidden">
                                 <p v-if="payment.paid_at">Paid: {{ formatDateTime(payment.paid_at) }}</p>
@@ -308,19 +327,11 @@ const totalPaid = () => {
 
                     <div class="flex items-start gap-3">
                         <!-- Proof of payment thumbnail, click to view full size -->
-                        <a
-                            v-if="payment.proof_of_payment"
-                            :href="`/storage/${payment.proof_of_payment}`"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Click to view full size proof of payment"
-                            class="block shrink-0 overflow-hidden rounded-md border transition-opacity hover:opacity-90"
-                        >
-                            <img
-                                :src="`/storage/${payment.proof_of_payment}`"
-                                alt="Proof of payment"
-                                class="h-16 w-16 object-cover"
-                            />
+                        <a v-if="payment.proof_of_payment" :href="`/storage/${payment.proof_of_payment}`"
+                            target="_blank" rel="noopener noreferrer" title="Click to view full size proof of payment"
+                            class="block shrink-0 overflow-hidden rounded-md border transition-opacity hover:opacity-90">
+                            <img :src="`/storage/${payment.proof_of_payment}`" alt="Proof of payment"
+                                class="h-16 w-16 object-cover" />
                         </a>
 
                         <div class="hidden text-left text-xs text-muted-foreground sm:block sm:text-right">
@@ -347,18 +358,11 @@ const totalPaid = () => {
             <p class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <ImageIcon class="h-3.5 w-3.5" /> Package Image
             </p>
-            <a
-                :href="`/storage/${booking.tour_date.package.image}`"
-                target="_blank"
-                rel="noopener noreferrer"
+            <a :href="`/storage/${booking.tour_date.package.image}`" target="_blank" rel="noopener noreferrer"
                 class="mt-2 block w-full max-w-md overflow-hidden rounded-md border transition-opacity hover:opacity-90"
-                title="Click to view full size"
-            >
-                <img 
-                    :src="`/storage/${booking.tour_date.package.image}`" 
-                    :alt="booking.tour_date.package.package_name"
-                    class="h-56 w-full object-cover"
-                />
+                title="Click to view full size">
+                <img :src="`/storage/${booking.tour_date.package.image}`" :alt="booking.tour_date.package.package_name"
+                    class="h-56 w-full object-cover" />
             </a>
         </div>
 

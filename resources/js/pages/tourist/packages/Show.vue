@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
-import { 
-    ArrowLeft, 
-    MapPin, 
-    Calendar, 
-    Users, 
+import { ref, computed, watch } from 'vue';
+import {
+    ArrowLeft,
+    MapPin,
+    Calendar,
+    Users,
     Package as PackageIcon,
     CheckCircle,
     Clock,
     Info,
     AlertCircle,
-    CalendarClock
+    CalendarClock,
+    Loader2
 } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -51,10 +52,11 @@ const props = defineProps<{
         available_spots: number;
         is_available: boolean;
     }>;
-    pickupLocations: Array<{
+    pickupSchedules: Array<{
         id: number;
-        name: string;
-        address: string | null;
+        tour_date_id: number;
+        pickup_location_id: number;
+        label: string;
     }>;
     tourTimes: Array<{
         id: number;
@@ -64,8 +66,14 @@ const props = defineProps<{
 }>();
 
 const selectedTourDate = ref<string>('');
-const selectedPickupLocation = ref<string>('');
+const selectedPickupSchedule = ref<string>('');
 const numberOfGuests = ref(1);
+
+// NEW: loading state while navigating to the booking page
+const isProcessing = ref(false);
+
+// NEW: field-level error state, shown inline instead of alert()
+const errors = ref<{ tourDate?: string; pickupSchedule?: string }>({});
 
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-PH', {
@@ -104,24 +112,56 @@ const maxGuests = computed(() => {
     return selectedTourDateData.value?.available_spots || 20;
 });
 
+const filteredPickupSchedules = computed(() => {
+    if (!selectedTourDate.value) return [];
+    return props.pickupSchedules.filter(
+        (schedule) => String(schedule.tour_date_id) === selectedTourDate.value
+    );
+});
+
+// Reset pickup selection + clear its error whenever the tour date changes
+watch(selectedTourDate, () => {
+    selectedPickupSchedule.value = '';
+    errors.value.pickupSchedule = undefined;
+    if (selectedTourDate.value) {
+        errors.value.tourDate = undefined;
+    }
+});
+
+watch(selectedPickupSchedule, () => {
+    if (selectedPickupSchedule.value) {
+        errors.value.pickupSchedule = undefined;
+    }
+});
+
 const handleBookNow = () => {
+    // validate inline instead of alert()
+    errors.value = {};
+
     if (!selectedTourDate.value) {
-        alert('Please select a tour date.');
+        errors.value.tourDate = 'Please select a tour date.';
+    }
+    if (!selectedPickupSchedule.value) {
+        errors.value.pickupSchedule = 'Please select a pickup location.';
+    }
+    if (errors.value.tourDate || errors.value.pickupSchedule) {
         return;
     }
-    
-    if (!selectedPickupLocation.value) {
-        alert('Please select a pickup location.');
-        return;
-    }
-    
+
+    if (isProcessing.value) return;
+    isProcessing.value = true;
+
     const params = new URLSearchParams({
         tour_date_id: selectedTourDate.value,
-        pickup_location_id: selectedPickupLocation.value,
+        pickup_schedule_id: selectedPickupSchedule.value,
         guests: String(numberOfGuests.value),
     });
-    
-    router.get(`/tourist/bookings/create?${params.toString()}`);
+
+    router.get(`/tourist/bookings/create?${params.toString()}`, {}, {
+        onFinish: () => {
+            isProcessing.value = false;
+        },
+    });
 };
 </script>
 
@@ -266,9 +306,14 @@ const handleBookNow = () => {
 
                             <!-- Tour Date Selection -->
                             <div>
-                                <label class="mb-2 block text-sm font-medium">Select Tour Date</label>
-                                <Select v-model="selectedTourDate">
-                                    <SelectTrigger>
+                                <label class="mb-2 block text-sm font-medium">
+                                    Select Tour Date <span class="text-red-500">*</span>
+                                </label>
+                                <Select
+                                    v-model="selectedTourDate"
+                                    :disabled="isProcessing"
+                                >
+                                    <SelectTrigger :class="errors.tourDate ? 'border-red-500 focus:ring-red-500' : ''">
                                         <SelectValue placeholder="Choose a date" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -288,25 +333,41 @@ const handleBookNow = () => {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <p v-if="errors.tourDate" class="mt-1 text-xs text-red-500">
+                                    {{ errors.tourDate }}
+                                </p>
                             </div>
 
-                            <!-- Pickup Location -->
+                            <!-- Pickup Schedule -->
                             <div>
-                                <label class="mb-2 block text-sm font-medium">Pickup Location</label>
-                                <Select v-model="selectedPickupLocation">
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select pickup location" />
+                                <label class="mb-2 block text-sm font-medium">
+                                    Pickup Location & Time <span class="text-red-500">*</span>
+                                </label>
+                                <Select
+                                    v-model="selectedPickupSchedule"
+                                    :disabled="!selectedTourDate || isProcessing"
+                                >
+                                    <SelectTrigger :class="errors.pickupSchedule ? 'border-red-500 focus:ring-red-500' : ''">
+                                        <SelectValue
+                                            :placeholder="selectedTourDate ? 'Select pickup location & time' : 'Select a tour date first'"
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem
-                                            v-for="location in pickupLocations"
-                                            :key="location.id"
-                                            :value="String(location.id)"
+                                            v-for="schedule in filteredPickupSchedules"
+                                            :key="schedule.id"
+                                            :value="String(schedule.id)"
                                         >
-                                            {{ location.name }}
+                                            {{ schedule.label }}
                                         </SelectItem>
+                                        <p v-if="selectedTourDate && filteredPickupSchedules.length === 0" class="px-2 py-1.5 text-xs text-muted-foreground">
+                                            No pickup schedules for this tour date.
+                                        </p>
                                     </SelectContent>
                                 </Select>
+                                <p v-if="errors.pickupSchedule" class="mt-1 text-xs text-red-500">
+                                    {{ errors.pickupSchedule }}
+                                </p>
                             </div>
 
                             <!-- Number of Guests -->
@@ -317,7 +378,8 @@ const handleBookNow = () => {
                                     type="number"
                                     min="1"
                                     :max="maxGuests"
-                                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    :disabled="isProcessing"
+                                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                                 />
                                 <p v-if="selectedTourDateData" class="mt-1 text-xs text-muted-foreground">
                                     Max {{ maxGuests }} spots available
@@ -329,9 +391,10 @@ const handleBookNow = () => {
                                 class="w-full"
                                 size="lg"
                                 @click="handleBookNow"
-                                :disabled="!selectedTourDate || !selectedPickupLocation"
+                                :disabled="isProcessing"
                             >
-                                Book Now
+                                <Loader2 v-if="isProcessing" class="mr-2 h-4 w-4 animate-spin" />
+                                {{ isProcessing ? 'Processing...' : 'Book Now' }}
                             </Button>
 
                             <p class="text-center text-xs text-muted-foreground">
